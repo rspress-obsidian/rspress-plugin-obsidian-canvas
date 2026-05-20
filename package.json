@@ -1,0 +1,24 @@
+{
+  "name": "rspress-plugin-obsidian-canvas",
+  "module": "0.0.1",
+  "type": "module",
+  "description": "",
+  "files": [
+    "src",
+    "theme",
+    "README.md"
+  ],
+  "keywords": [
+    "rspress",
+    "rspress-plugin",
+    "obsidian",
+    "canvas",
+    "obsidian-canvas"
+  ],
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
