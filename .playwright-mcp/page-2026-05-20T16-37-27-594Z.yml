@@ -1,0 +1,213 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - link "Rspress X Obsidian Canvas" [ref=e6] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e7]: Rspress X Obsidian Canvas
+    - generic [ref=e8]:
+      - button "Search CtrlK" [ref=e9] [cursor=pointer]:
+        - generic [ref=e10]:
+          - img [ref=e11]
+          - generic [ref=e13]: Search
+        - generic [ref=e14]: CtrlK
+      - button "mobile hamburger" [ref=e15] [cursor=pointer]:
+        - img [ref=e16]
+  - generic [ref=e19]:
+    - button "Menu" [ref=e20]:
+      - img [ref=e21]
+      - generic [ref=e23]: Menu
+    - button "ON THIS PAGE" [ref=e24]:
+      - generic [ref=e25]: ON THIS PAGE
+      - img [ref=e26]
+      - img [ref=e29]
+  - generic [ref=e31]:
+    - complementary [ref=e32]:
+      - generic [ref=e33] [cursor=pointer]:
+        - generic [ref=e35]: Guide
+        - img [ref=e38]
+      - generic [ref=e41]:
+        - link "Getting Started" [ref=e42] [cursor=pointer]:
+          - /url: /guide/getting-started.html
+          - generic [ref=e44]: Getting Started
+        - link "Configuration" [ref=e45] [cursor=pointer]:
+          - /url: /guide/configuration.html
+          - generic [ref=e47]: Configuration
+        - link "Canvas Format" [ref=e48] [cursor=pointer]:
+          - /url: /guide/canvas-format.html
+          - generic [ref=e50]: Canvas Format
+        - link "Styling" [ref=e51] [cursor=pointer]:
+          - /url: /guide/styling.html
+          - generic [ref=e53]: Styling
+    - main [ref=e55]:
+      - generic [ref=e56]:
+        - heading "Getting Started" [level=1] [ref=e57]:
+          - link [ref=e58] [cursor=pointer]:
+            - /url: "#getting-started"
+            - text: "#"
+          - text: Getting Started
+        - paragraph [ref=e59]:
+          - text: Render Obsidian vault
+          - code [ref=e60]: .canvas
+          - text: files as interactive pages in your Rspress documentation site.
+        - heading "Install" [level=2] [ref=e61]:
+          - link [ref=e62] [cursor=pointer]:
+            - /url: "#install"
+            - text: "#"
+          - text: Install
+        - generic [ref=e64]:
+          - code [ref=e67]:
+            - generic [ref=e68]: bun add rspress-plugin-obsidian-canvas
+          - generic [ref=e69]:
+            - button "Toggle code wrap" [ref=e70] [cursor=pointer]:
+              - img
+              - img [ref=e71]
+            - button "Copy code" [ref=e73] [cursor=pointer]:
+              - img [ref=e74]
+              - img
+        - paragraph [ref=e77]: "Add the required peer dependencies if you don't have them:"
+        - generic [ref=e79]:
+          - code [ref=e82]:
+            - generic [ref=e83]: bun add @rspress/core react react-dom
+          - generic [ref=e84]:
+            - button "Toggle code wrap" [ref=e85] [cursor=pointer]:
+              - img
+              - img [ref=e86]
+            - button "Copy code" [ref=e88] [cursor=pointer]:
+              - img [ref=e89]
+              - img
+        - heading "Basic Setup" [level=2] [ref=e92]:
+          - link [ref=e93] [cursor=pointer]:
+            - /url: "#basic-setup"
+            - text: "#"
+          - text: Basic Setup
+        - paragraph [ref=e94]:
+          - text: Add the plugin to your
+          - code [ref=e95]: rspress.config.ts
+          - text: ":"
+        - generic [ref=e97]:
+          - code [ref=e100]:
+            - generic [ref=e101]: "import { defineConfig } from '@rspress/core';"
+            - generic [ref=e102]: "import { pluginObsidianCanvas } from 'rspress-plugin-obsidian-canvas';"
+            - generic [ref=e103]: "export default defineConfig({"
+            - generic [ref=e104]: "plugins: ["
+            - generic [ref=e105]: "pluginObsidianCanvas({"
+            - generic [ref=e106]: "vaultRoot: './Obsidian Vault',"
+            - generic [ref=e107]: "routePrefix: '/canvas',"
+            - generic [ref=e108]: "}),"
+            - generic [ref=e109]: "],"
+            - generic [ref=e110]: "});"
+          - generic [ref=e111]:
+            - button "Toggle code wrap" [ref=e112] [cursor=pointer]:
+              - img
+              - img [ref=e113]
+            - button "Copy code" [ref=e115] [cursor=pointer]:
+              - img [ref=e116]
+              - img
+        - paragraph [ref=e119]: "Import the stylesheet in your theme entry point or a global layout file:"
+        - generic [ref=e121]:
+          - code [ref=e124]:
+            - generic [ref=e125]: import 'rspress-plugin-obsidian-canvas/style.css';
+          - generic [ref=e126]:
+            - button "Toggle code wrap" [ref=e127] [cursor=pointer]:
+              - img
+              - img [ref=e128]
+            - button "Copy code" [ref=e130] [cursor=pointer]:
+              - img [ref=e131]
+              - img
+        - heading "How It Works" [level=2] [ref=e134]:
+          - link [ref=e135] [cursor=pointer]:
+            - /url: "#how-it-works"
+            - text: "#"
+          - text: How It Works
+        - list [ref=e136]:
+          - listitem [ref=e137]:
+            - strong [ref=e138]: Build time
+            - text: — The plugin scans your vault directory for
+            - code [ref=e139]: .canvas
+            - text: files
+          - listitem [ref=e140]: Each file is parsed, validated against the JSON Canvas 1.0 spec, and embedded as JSON
+          - listitem [ref=e141]:
+            - strong [ref=e142]: Runtime
+            - text: — A
+            - code [ref=e143]: CanvasViewer
+            - text: component renders an interactive React canvas on each page
+          - listitem [ref=e144]: Nodes are positioned absolutely on a pannable/zoomable viewport with SVG bezier edges
+        - heading "Your First Canvas" [level=2] [ref=e145]:
+          - link [ref=e146] [cursor=pointer]:
+            - /url: "#your-first-canvas"
+            - text: "#"
+          - text: Your First Canvas
+        - paragraph [ref=e147]:
+          - text: Place a
+          - code [ref=e148]: .canvas
+          - text: "file in your vault directory:"
+        - generic [ref=e150]:
+          - code [ref=e153]:
+            - generic [ref=e154]: "{"
+            - generic [ref=e155]: "\"nodes\": ["
+            - generic [ref=e156]: "{"
+            - generic [ref=e157]: "\"id\": \"n1\","
+            - generic [ref=e158]: "\"type\": \"text\","
+            - generic [ref=e159]: "\"x\": 0,"
+            - generic [ref=e160]: "\"y\": 0,"
+            - generic [ref=e161]: "\"width\": 300,"
+            - generic [ref=e162]: "\"height\": 150,"
+            - generic [ref=e163]: "\"text\": \"# Hello Canvas\\n\\nThis is a **text node** with Markdown.\""
+            - generic [ref=e164]: "},"
+            - generic [ref=e165]: "{"
+            - generic [ref=e166]: "\"id\": \"n2\","
+            - generic [ref=e167]: "\"type\": \"file\","
+            - generic [ref=e168]: "\"x\": 400,"
+            - generic [ref=e169]: "\"y\": 0,"
+            - generic [ref=e170]: "\"width\": 200,"
+            - generic [ref=e171]: "\"height\": 100,"
+            - generic [ref=e172]: "\"file\": \"Welcome.md\""
+            - generic [ref=e173]: "}"
+            - generic [ref=e174]: "],"
+            - generic [ref=e175]: "\"edges\": ["
+            - generic [ref=e176]: "{"
+            - generic [ref=e177]: "\"id\": \"e1\","
+            - generic [ref=e178]: "\"fromNode\": \"n1\","
+            - generic [ref=e179]: "\"fromSide\": \"right\","
+            - generic [ref=e180]: "\"toNode\": \"n2\","
+            - generic [ref=e181]: "\"toSide\": \"left\","
+            - generic [ref=e182]: "\"label\": \"links to\""
+            - generic [ref=e183]: "}"
+            - generic [ref=e184]: "]"
+            - generic [ref=e185]: "}"
+          - generic [ref=e186]:
+            - button "Toggle code wrap" [ref=e187] [cursor=pointer]:
+              - img
+              - img [ref=e188]
+            - button "Copy code" [ref=e190] [cursor=pointer]:
+              - img [ref=e191]
+              - img
+        - paragraph [ref=e194]:
+          - text: Run
+          - code [ref=e195]: rspress dev
+          - text: and visit
+          - code [ref=e196]: /canvas/<filename>
+          - text: to see it rendered.
+        - heading "Next Steps" [level=2] [ref=e197]:
+          - link [ref=e198] [cursor=pointer]:
+            - /url: "#next-steps"
+            - text: "#"
+          - text: Next Steps
+        - list [ref=e199]:
+          - listitem [ref=e200]:
+            - link "Configure plugin options" [ref=e201] [cursor=pointer]:
+              - /url: /guide/configuration.html
+            - text: for vault paths and route prefixes
+          - listitem [ref=e202]:
+            - link "Learn about the canvas format" [ref=e203] [cursor=pointer]:
+              - /url: /guide/canvas-format.html
+            - text: and supported features
+          - listitem [ref=e204]:
+            - link "Customize the appearance" [ref=e205] [cursor=pointer]:
+              - /url: /guide/styling.html
+            - text: with CSS overrides
+      - link "Next page Configuration" [ref=e209] [cursor=pointer]:
+        - /url: /guide/configuration.html
+        - generic [ref=e210]: Next page
+        - generic [ref=e211]:
+          - generic [ref=e212]: Configuration
+          - img [ref=e213]

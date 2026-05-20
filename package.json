@@ -1,11 +1,15 @@
 {
   "name": "rspress-plugin-obsidian-canvas",
-  "module": "0.0.1",
+  "version": "0.0.1",
   "type": "module",
-  "description": "",
+  "description": "Rspress plugin to render Obsidian vault canvas files",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./style.css": "./src/styles/canvas.css"
+  },
   "files": [
     "src",
-    "theme",
     "README.md"
   ],
   "keywords": [
@@ -13,12 +17,27 @@
     "rspress-plugin",
     "obsidian",
     "canvas",
-    "obsidian-canvas"
+    "obsidian-canvas",
+    "json-canvas"
   ],
-  "devDependencies": {
-    "@types/bun": "latest"
+  "scripts": {
+    "docs:dev": "rspress dev",
+    "docs:build": "rspress build",
+    "docs:preview": "rspress preview",
+    "test": "bun test"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "@rspress/core": "^2.0.12",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^18.3.29",
+    "@types/react-dom": "^18.3.7"
   }
 }

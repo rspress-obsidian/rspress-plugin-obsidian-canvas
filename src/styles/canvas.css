@@ -1,0 +1,341 @@
+.canvas-container {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.canvas-viewport {
+  width: 100%;
+  height: min(80vh, 700px);
+  overflow: hidden;
+  position: relative;
+  background-color: #fafafa;
+  background-image:
+    radial-gradient(circle, #d0d0d0 1px, transparent 1px);
+  background-size: 24px 24px;
+  cursor: grab;
+}
+
+.canvas-viewport:active {
+  cursor: grabbing;
+}
+
+.canvas-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.canvas-edges {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.canvas-edge {
+  transition: stroke-width 0.15s ease, stroke-opacity 0.15s ease;
+}
+
+.canvas-edge-highlighted path {
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
+}
+
+.canvas-node {
+  border-radius: 10px;
+  background-color: white;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+  border: 1.5px solid #e8e8e8;
+  border-left-width: 4px;
+}
+
+.canvas-node:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.canvas-node-hovered {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+.canvas-node-text {
+  border-left-color: #b0b0b0;
+}
+
+.canvas-node-file {
+  border-left-color: #4d9de0;
+}
+
+.canvas-node-link {
+  border-left-color: #48bb78;
+  background-color: #f0fff4;
+}
+
+.canvas-node-group {
+  border: 1.5px dashed #d0d0d0;
+  border-left: 1.5px dashed #d0d0d0;
+  background-color: rgba(245, 245, 245, 0.3);
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.canvas-node-content {
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.canvas-text .canvas-markdown {
+  margin: 0;
+  padding: 0;
+}
+
+.canvas-text .canvas-markdown p {
+  margin: 0 0 0.6em 0;
+}
+
+.canvas-text .canvas-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.canvas-text .canvas-markdown h1,
+.canvas-text .canvas-markdown h2,
+.canvas-text .canvas-markdown h3,
+.canvas-text .canvas-markdown h4,
+.canvas-text .canvas-markdown h5,
+.canvas-text .canvas-markdown h6 {
+  margin: 0.3em 0 0.2em 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.canvas-text .canvas-markdown h1 { font-size: 1.4em; }
+.canvas-text .canvas-markdown h2 { font-size: 1.25em; }
+.canvas-text .canvas-markdown h3 { font-size: 1.1em; }
+.canvas-text .canvas-markdown h4 { font-size: 1em; }
+
+.canvas-text .canvas-markdown strong {
+  font-weight: 600;
+}
+
+.canvas-text .canvas-markdown em {
+  font-style: italic;
+}
+
+.canvas-text .canvas-markdown code {
+  background-color: #f0f0f0;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 0.9em;
+}
+
+.canvas-text .canvas-markdown pre {
+  background-color: #f5f5f5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.canvas-text .canvas-markdown pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.canvas-text .canvas-markdown blockquote {
+  border-left: 3px solid #e0e0e0;
+  margin: 0.5em 0;
+  padding-left: 12px;
+  color: #555555;
+}
+
+.canvas-text .canvas-markdown ul,
+.canvas-text .canvas-markdown ol {
+  margin: 0.3em 0;
+  padding-left: 20px;
+}
+
+.canvas-text .canvas-markdown li {
+  margin: 0.15em 0;
+}
+
+.canvas-text .canvas-markdown a {
+  color: #1976d2;
+  text-decoration: none;
+}
+
+.canvas-text .canvas-markdown a:hover {
+  text-decoration: underline;
+}
+
+.canvas-text .canvas-markdown .wiki-link {
+  color: #7b2cbf;
+}
+
+.canvas-text .canvas-markdown img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 0.4em 0;
+}
+
+.canvas-text .canvas-markdown hr {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 0.8em 0;
+}
+
+.canvas-text .canvas-markdown br {
+  line-height: 1.6;
+}
+
+.canvas-file-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+  border-radius: inherit;
+  transition: background-color 0.15s ease;
+}
+
+.canvas-file-link:hover {
+  background-color: #f5f5f5;
+}
+
+.canvas-file-link .canvas-file-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.canvas-file-link .canvas-file-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+  text-align: center;
+  padding: 0 8px;
+  word-break: break-word;
+}
+
+.canvas-file-link .canvas-file-subpath {
+  font-size: 12px;
+  color: #666666;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.canvas-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 12px;
+}
+
+.canvas-link a {
+  color: #1976d2;
+  text-decoration: none;
+  font-size: 14px;
+  word-break: break-all;
+  text-align: center;
+}
+
+.canvas-link a:hover {
+  text-decoration: underline;
+}
+
+.canvas-link-preview {
+  padding: 0;
+  height: 100%;
+}
+
+.canvas-link-preview iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 6px;
+}
+
+.canvas-group-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #888888;
+  padding: 8px 12px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.canvas-error {
+  padding: 20px;
+  color: #d32f2f;
+  background-color: #ffebee;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.canvas-toolbar {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+}
+
+.canvas-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.canvas-toolbar-btn:hover {
+  background: #f0f0f0;
+}
+
+.canvas-zoom-level {
+  min-width: 44px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  font-variant-numeric: tabular-nums;
+}
+
+.canvas-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: #e0e0e0;
+  margin: 0 4px;
+}
