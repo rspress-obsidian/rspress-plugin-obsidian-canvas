@@ -29,6 +29,7 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [showHelp, setShowHelp] = useState<boolean>(false);
+  const [copied, setCopied] = useState(false);
 
   const {
     setViewport,
@@ -123,6 +124,37 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
     }, 100);
     return () => clearTimeout(timer);
   }, [fitToView]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (isMod && e.key === '0') {
+        e.preventDefault();
+        resetZoom();
+      } else if (isMod && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        zoomIn();
+      } else if (isMod && e.key === '-') {
+        e.preventDefault();
+        zoomOut();
+      } else if (e.key === 'Escape') {
+        setSelectedNodeId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [resetZoom, zoomIn, zoomOut]);
+
+  const handleCopyLink = useCallback(() => {
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleViewportClick = useCallback((e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -330,6 +362,47 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
         <div className="canvas-toolbar-sep" />
         <button
           type="button"
+          className="canvas-toolbar-btn"
+          onClick={handleCopyLink}
+          title={copied ? 'Copied!' : 'Copy Share Link'}
+          aria-label="Copy share link">
+          {copied ? (
+            <svg
+              className="canvas-check-icon"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              role="img"
+              aria-label="Copied">
+              <title>Copied</title>
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          ) : (
+            <svg
+              className="canvas-link-icon"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              role="img"
+              aria-label="Share Link">
+              <title>Share Link</title>
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          )}
+        </button>
+        <button
+          type="button"
           className={`canvas-toolbar-btn ${showHelp ? 'canvas-btn-active' : ''}`}
           onClick={() => setShowHelp((p) => !p)}
           title="Help & Info"
@@ -384,7 +457,23 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
             </div>
             <div className="canvas-help-row">
               <span className="canvas-help-key">Select card</span>
-              <span className="canvas-help-desc">Click note. Click space to clear focus</span>
+              <span className="canvas-help-desc">Click note. Tap background to clear</span>
+            </div>
+            <div className="canvas-help-row">
+              <span className="canvas-help-key"><kbd>Ctrl+0</kbd> / <kbd>⌘0</kbd></span>
+              <span className="canvas-help-desc">Reset scale (1:1)</span>
+            </div>
+            <div className="canvas-help-row">
+              <span className="canvas-help-key"><kbd>Ctrl+=</kbd> / <kbd>⌘=</kbd></span>
+              <span className="canvas-help-desc">Zoom in</span>
+            </div>
+            <div className="canvas-help-row">
+              <span className="canvas-help-key"><kbd>Ctrl+-</kbd> / <kbd>⌘-</kbd></span>
+              <span className="canvas-help-desc">Zoom out</span>
+            </div>
+            <div className="canvas-help-row">
+              <span className="canvas-help-key"><kbd>Esc</kbd></span>
+              <span className="canvas-help-desc">Deselect card</span>
             </div>
           </div>
         </div>

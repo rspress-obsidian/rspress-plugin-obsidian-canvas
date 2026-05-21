@@ -96,13 +96,21 @@ html.dark,
 
 .canvas-viewport {
     width: 100%;
-    height: min(80vh, 700px);
+    height: min(80vh, 600px);
+    min-height: 300px;
     overflow: hidden;
     position: relative;
     background-color: var(--canvas-bg);
     cursor: grab;
     outline: none;
     transition: background-color 0.2s ease;
+}
+
+@media (max-width: 640px) {
+    .canvas-viewport {
+        height: min(50vh, 400px);
+        min-height: 250px;
+    }
 }
 
 .canvas-viewport:active {
@@ -560,6 +568,15 @@ html.dark,
     z-index: 100;
 }
 
+@media (max-width: 640px) {
+    .canvas-toolbar {
+        top: 12px;
+        right: 12px;
+        gap: 4px;
+        padding: 4px;
+    }
+}
+
 .canvas-toolbar-btn {
     width: 28px;
     height: 28px;
@@ -575,6 +592,13 @@ html.dark,
     transition: all 0.15s ease;
 }
 
+@media (max-width: 640px) {
+    .canvas-toolbar-btn {
+        width: 24px;
+        height: 24px;
+    }
+}
+
 .canvas-toolbar-btn:hover {
     background-color: var(--canvas-toolbar-btn-hover);
     color: var(--canvas-node-text);
@@ -584,11 +608,24 @@ html.dark,
     transform: scale(0.95);
 }
 
+.canvas-toolbar-btn .canvas-link-icon,
+.canvas-toolbar-btn .canvas-check-icon {
+    width: 15px;
+    height: 15px;
+}
+
 .canvas-toolbar-sep {
     width: 16px;
     height: 1px;
     background: var(--canvas-node-border);
     margin: 4px 0;
+}
+
+@media (max-width: 640px) {
+    .canvas-toolbar-sep {
+        width: 14px;
+        margin: 2px 0;
+    }
 }
 
 .canvas-btn-inactive {
@@ -662,6 +699,17 @@ html.dark,
     padding: 2px 6px;
     border-radius: 4px;
     font-family: monospace;
+}
+
+.canvas-help-key kbd {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 700;
+    background-color: var(--canvas-node-bg);
+    border: 1px solid var(--canvas-node-border);
+    border-radius: 3px;
+    padding: 0 4px;
+    margin: 0 1px;
 }
 
 .canvas-help-desc {
