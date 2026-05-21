@@ -1,16 +1,28 @@
 {
   "name": "rspress-plugin-obsidian-canvas",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "Rspress plugin to render Obsidian vault canvas files",
-  "main": "./src/index.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./style.css": "./src/styles/canvas.css"
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./style.css": "./dist/canvas.css"
   },
   "files": [
-    "src",
-    "README.md"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "keywords": [
     "rspress",
@@ -21,10 +33,13 @@
     "json-canvas"
   ],
   "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
     "docs:dev": "rspress dev",
     "docs:build": "rspress build",
     "docs:preview": "rspress preview",
-    "test": "bun test"
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
     "@rspress/core": "^2.0.12",
@@ -33,11 +48,22 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "fast-glob": "^3.3.3"
+    "fast-glob": "^3.3.3",
+    "marked": "^18.0.4"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "^18.3.29",
-    "@types/react-dom": "^18.3.7"
-  }
+    "@types/react-dom": "^18.3.7",
+    "tsup": "^8.5.1"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/rspress-plugin-obsidian-canvas"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/rspress-plugin-obsidian-canvas/issues"
+  },
+  "homepage": "https://github.com/your-username/rspress-plugin-obsidian-canvas#readme"
 }
