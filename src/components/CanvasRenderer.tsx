@@ -31,7 +31,6 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
   const [showHelp, setShowHelp] = useState<boolean>(false);
 
   const {
-    viewport,
     setViewport,
     transform,
     setContainerRef,
@@ -67,15 +66,15 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
     setHoveredNodeId(nodeId);
   }, []);
 
-  const sortedNodes = useMemo(
-    () =>
-      [...data.nodes].sort((a, b) => {
-        if (a.type === 'group' && b.type !== 'group') return -1;
-        if (b.type === 'group' && a.type !== 'group') return 1;
-        return 0;
-      }),
-    [data.nodes],
-  );
+  const sortedNodes = useMemo(() => {
+    const groups: CanvasData['nodes'] = [];
+    const others: CanvasData['nodes'] = [];
+    for (const node of data.nodes) {
+      if (node.type === 'group') groups.push(node);
+      else others.push(node);
+    }
+    return [...groups, ...others];
+  }, [data.nodes]);
 
   const fitToView = useCallback(() => {
     if (data.nodes.length === 0) return;
@@ -220,6 +219,7 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
       {/* Floating Vertical Toolbar (upper right) */}
       <div className="canvas-toolbar" role="toolbar" aria-label="Canvas vertical controls">
         <button
+          type="button"
           className={`canvas-toolbar-btn ${!showGrid ? 'canvas-btn-inactive' : ''}`}
           onClick={() => setShowGrid((p) => !p)}
           title="Toggle Grid Dots"
@@ -232,13 +232,17 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
             stroke="currentColor"
             strokeWidth="2.5"
             strokeLinecap="round"
-            strokeLinejoin="round">
+            strokeLinejoin="round"
+            role="img"
+            aria-label="Settings">
+            <title>Settings</title>
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </button>
         <div className="canvas-toolbar-sep" />
         <button
+          type="button"
           className="canvas-toolbar-btn"
           onClick={zoomIn}
           title="Zoom In"
@@ -251,12 +255,16 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
             stroke="currentColor"
             strokeWidth="2.5"
             strokeLinecap="round"
-            strokeLinejoin="round">
+            strokeLinejoin="round"
+            role="img"
+            aria-label="Zoom In">
+            <title>Zoom In</title>
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </button>
         <button
+          type="button"
           className="canvas-toolbar-btn"
           onClick={resetZoom}
           title="Reset Scale (1:1)"
@@ -269,12 +277,16 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
             stroke="currentColor"
             strokeWidth="2.5"
             strokeLinecap="round"
-            strokeLinejoin="round">
+            strokeLinejoin="round"
+            role="img"
+            aria-label="Reset">
+            <title>Reset</title>
             <circle cx="12" cy="12" r="10" />
             <circle cx="12" cy="12" r="3" />
           </svg>
         </button>
         <button
+          type="button"
           className="canvas-toolbar-btn"
           onClick={fitToView}
           title="Fit to View"
@@ -287,11 +299,15 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
             stroke="currentColor"
             strokeWidth="2.5"
             strokeLinecap="round"
-            strokeLinejoin="round">
+            strokeLinejoin="round"
+            role="img"
+            aria-label="Fit to View">
+            <title>Fit to View</title>
             <path d="M15 3h6v6M9 21H3v-6M21 15v6h-6M3 9V3h6" />
           </svg>
         </button>
         <button
+          type="button"
           className="canvas-toolbar-btn"
           onClick={zoomOut}
           title="Zoom Out"
@@ -304,47 +320,16 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
             stroke="currentColor"
             strokeWidth="2.5"
             strokeLinecap="round"
-            strokeLinejoin="round">
+            strokeLinejoin="round"
+            role="img"
+            aria-label="Zoom Out">
+            <title>Zoom Out</title>
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </button>
         <div className="canvas-toolbar-sep" />
         <button
-          className="canvas-toolbar-btn canvas-btn-disabled"
-          title="Undo"
-          aria-label="Undo"
-          disabled>
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <path d="M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
-          </svg>
-        </button>
-        <button
-          className="canvas-toolbar-btn canvas-btn-disabled"
-          title="Redo"
-          aria-label="Redo"
-          disabled>
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <path d="M21 7v6h-6M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
-          </svg>
-        </button>
-        <div className="canvas-toolbar-sep" />
-        <button
+          type="button"
           className={`canvas-toolbar-btn ${showHelp ? 'canvas-btn-active' : ''}`}
           onClick={() => setShowHelp((p) => !p)}
           title="Help & Info"
@@ -357,7 +342,10 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
             stroke="currentColor"
             strokeWidth="2.5"
             strokeLinecap="round"
-            strokeLinejoin="round">
+            strokeLinejoin="round"
+            role="img"
+            aria-label="Help">
+            <title>Help</title>
             <circle cx="12" cy="12" r="10" />
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
           </svg>
@@ -369,7 +357,7 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
         <div className="canvas-help-modal">
           <div className="canvas-help-header">
             <h3>Canvas Controls</h3>
-            <button className="canvas-help-close" onClick={() => setShowHelp(false)}>
+            <button type="button" className="canvas-help-close" onClick={() => setShowHelp(false)}>
               ×
             </button>
           </div>

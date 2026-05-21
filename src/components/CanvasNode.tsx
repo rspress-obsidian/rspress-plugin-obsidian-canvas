@@ -82,7 +82,7 @@ export function CanvasNodeComponent({
       className={`canvas-node canvas-node-${node.type} ${isHovered ? 'canvas-node-hovered' : ''} ${
         isSelected ? 'canvas-node-selected' : ''
       }`}
-      role={node.type === 'group' ? 'group' : 'article'}
+      role="button"
       aria-label={
         node.type === 'text'
           ? 'Text node'
@@ -100,13 +100,20 @@ export function CanvasNodeComponent({
         // Prevent viewport pan/drag from starting when interacting with nodes
         e.stopPropagation();
       }}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          onClick?.(node.id);
+        }
+      }}
       onClick={(e) => {
         e.stopPropagation();
         onClick?.(node.id);
       }}>
       <NodeContent
         node={node}
-        isHovered={isHovered}
         fileRoutePrefix={fileRoutePrefix}
         linkPreview={linkPreview}
       />
@@ -116,12 +123,10 @@ export function CanvasNodeComponent({
 
 function NodeContent({
   node,
-  isHovered,
   fileRoutePrefix,
   linkPreview,
 }: {
   node: CanvasNode;
-  isHovered?: boolean;
   fileRoutePrefix?: string;
   linkPreview?: boolean;
 }) {
@@ -136,6 +141,7 @@ function NodeContent({
     case 'text':
       return (
         <div className="canvas-node-content canvas-text">
+          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized via sanitizeHtml() */}
           <div className="canvas-markdown" dangerouslySetInnerHTML={{ __html: renderedMarkdown }} />
         </div>
       );
@@ -160,7 +166,10 @@ function NodeContent({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
-                style={{ color: node.color ? '#ffffff' : undefined }}>
+                style={{ color: node.color ? '#ffffff' : undefined }}
+                role="img"
+                aria-label="Image">
+                <title>Image</title>
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <polyline points="21 15 16 10 5 21" />
@@ -192,13 +201,109 @@ function NodeContent({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
-                style={{ color: node.color ? '#ffffff' : undefined }}>
+                style={{ color: node.color ? '#ffffff' : undefined }}
+                role="img"
+                aria-label="Error">
+                <title>Error</title>
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
               </svg>
               <span className="canvas-node-file-header-title">{titleText}</span>
             </div>
             <div className="canvas-node-file-body canvas-file-error-body">
               <div className="canvas-file-error-text">{node.fileContent}</div>
+            </div>
+          </div>
+        );
+      }
+
+      if ('isVideo' in node && node.isVideo && 'imageUrl' in node && node.imageUrl) {
+        return (
+          <div className="canvas-node-content">
+            <div
+              className="canvas-node-file-header"
+              style={{
+                backgroundColor: node.color ? borderColor : undefined,
+                color: node.color ? '#ffffff' : undefined,
+              }}>
+              <svg
+                className="canvas-node-file-header-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                style={{ color: node.color ? '#ffffff' : undefined }}
+                role="img"
+                aria-label="File">
+                <title>File</title>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+              </svg>
+              <span className="canvas-node-file-header-title">{node.file}</span>
+            </div>
+            <div className="canvas-node-file-body">
+              <video className="canvas-file-video" src={node.imageUrl} controls></video>
+            </div>
+          </div>
+        );
+      }
+
+      if ('isAudio' in node && node.isAudio && 'imageUrl' in node && node.imageUrl) {
+        return (
+          <div className="canvas-node-content">
+            <div
+              className="canvas-node-file-header"
+              style={{
+                backgroundColor: node.color ? borderColor : undefined,
+                color: node.color ? '#ffffff' : undefined,
+              }}>
+              <svg
+                className="canvas-node-file-header-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                style={{ color: node.color ? '#ffffff' : undefined }}
+                role="img"
+                aria-label="Audio">
+                <title>Audio</title>
+                <path d="M9 18V5l12-2v13" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+              </svg>
+              <span className="canvas-node-file-header-title">{node.file}</span>
+            </div>
+            <div className="canvas-node-file-body canvas-file-audio-body">
+              <audio className="canvas-file-audio" src={node.imageUrl} controls></audio>
+            </div>
+          </div>
+        );
+      }
+
+      if ('isPdf' in node && node.isPdf && 'imageUrl' in node && node.imageUrl) {
+        return (
+          <div className="canvas-node-content">
+            <div
+              className="canvas-node-file-header"
+              style={{
+                backgroundColor: node.color ? borderColor : undefined,
+                color: node.color ? '#ffffff' : undefined,
+              }}>
+              <svg
+                className="canvas-node-file-header-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                style={{ color: node.color ? '#ffffff' : undefined }}
+                role="img"
+                aria-label="PDF">
+                <title>PDF</title>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              <span className="canvas-node-file-header-title">{node.file}</span>
+            </div>
+            <div className="canvas-node-file-body">
+              <iframe className="canvas-file-pdf" src={node.imageUrl} title={node.file} />
             </div>
           </div>
         );
@@ -221,7 +326,10 @@ function NodeContent({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
-                style={{ color: node.color ? '#ffffff' : undefined }}>
+                style={{ color: node.color ? '#ffffff' : undefined }}
+                role="img"
+                aria-label="Note">
+                <title>Note</title>
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
               </svg>
               <span className="canvas-node-file-header-title">{titleText}</span>
@@ -237,7 +345,10 @@ function NodeContent({
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
-                  style={{ color: node.color ? '#ffffff' : undefined }}>
+                  style={{ color: node.color ? '#ffffff' : undefined }}
+                  role="img"
+                  aria-label="Open">
+                  <title>Open</title>
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />
@@ -245,6 +356,7 @@ function NodeContent({
               </a>
             </div>
             <div className="canvas-node-file-body">
+              {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized via sanitizeHtml() */}
               <div className="canvas-markdown" dangerouslySetInnerHTML={{ __html: fileMarkdown }} />
             </div>
           </div>
@@ -262,7 +374,10 @@ function NodeContent({
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.5">
+            strokeWidth="1.5"
+            role="img"
+            aria-label="File">
+            <title>File</title>
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
           </svg>
           <div className="canvas-file-name">{fileName}</div>
@@ -287,7 +402,10 @@ function NodeContent({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
-                style={{ color: node.color ? '#ffffff' : undefined }}>
+                style={{ color: node.color ? '#ffffff' : undefined }}
+                role="img"
+                aria-label="Link">
+                <title>Link</title>
                 <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
               </svg>

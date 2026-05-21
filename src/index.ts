@@ -63,6 +63,22 @@ export function pluginObsidianCanvas(options?: CanvasPluginOptions): RspressPlug
                           : `image/${extName === 'jpg' ? 'jpeg' : extName}`;
                       node.imageUrl = `data:${mimeType};base64,${imgBuf.toString('base64')}`;
                       node.isImage = true;
+                    } else if (['.mp4', '.webm', '.mov', '.mkv'].includes(ext)) {
+                      const mediaBuf = await readFile(fileAbsPath);
+                      const extName = ext.substring(1);
+                      const mimeType = `video/${extName === 'mov' ? 'quicktime' : extName}`;
+                      node.imageUrl = `data:${mimeType};base64,${mediaBuf.toString('base64')}`;
+                      node.isVideo = true;
+                    } else if (['.mp3', '.wav', '.ogg', '.m4a', '.flac'].includes(ext)) {
+                      const mediaBuf = await readFile(fileAbsPath);
+                      const extName = ext.substring(1);
+                      const mimeType = `audio/${extName === 'm4a' ? 'mp4' : extName}`;
+                      node.imageUrl = `data:${mimeType};base64,${mediaBuf.toString('base64')}`;
+                      node.isAudio = true;
+                    } else if (ext === '.pdf') {
+                      const pdfBuf = await readFile(fileAbsPath);
+                      node.imageUrl = `data:application/pdf;base64,${pdfBuf.toString('base64')}`;
+                      node.isPdf = true;
                     } else if (['.md', '.mdx', '.markdown'].includes(ext)) {
                       const content = await readFile(fileAbsPath, 'utf-8');
                       let parsedContent = content.trim();

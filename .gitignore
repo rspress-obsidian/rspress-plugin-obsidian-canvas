@@ -1,41 +1,44 @@
-# dependencies (bun install)
-node_modules
+# --- Dependencies ---
+node_modules/
 
-# output
-out
-dist
+# --- Build output ---
+out/
+dist/
 *.tgz
 
-# code coverage
-coverage
+# --- Rspress docs build ---
+doc_build/
+
+# --- Code coverage ---
+coverage/
 *.lcov
 
-# logs
-logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+# --- Logs ---
+logs/
+*.log
 
-# dotenv environment variable files
+# --- Environment files ---
 .env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+.env.*.local
 
-# caches
+# --- Cache directories ---
 .eslintcache
-.cache
+.cache/
 *.tsbuildinfo
 
-# IntelliJ based IDEs
-.idea
+# --- Editor / IDE ---
+.idea/
+*.swp
+*.swo
 
-# Finder (MacOS) folder config
+# --- OS files ---
 .DS_Store
+Thumbs.db
 
-# playwright
-.playwright-mcp
+# --- Playwright ---
+.playwright-mcp/
+test-results/
+playwright-report/
 
-# rspress build output
-doc_build
-.omo
+# --- OpenCode ---
+.omo/

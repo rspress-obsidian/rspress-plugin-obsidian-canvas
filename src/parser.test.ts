@@ -458,5 +458,5 @@ test('parses real Demo.canvas file', async () => {
   const data = parseCanvas(content);
   expect(data.nodes).toHaveLength(5);
   expect(data.edges).toHaveLength(3);
-  expect(data.nodes.map((n) => n.type)).toEqual(['group', 'file', 'text', 'text', 'link']);
+  expect(data.nodes.map((n) => n.type)).toEqual(['group', 'text', 'link', 'file', 'text']);
 });

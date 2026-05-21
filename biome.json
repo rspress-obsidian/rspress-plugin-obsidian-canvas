@@ -8,6 +8,12 @@
         "noNonNullAssertion": "warn",
         "useBlockStatements": "off"
       },
+      "a11y": {
+        "noNoninteractiveTabindex": "off",
+        "useKeyWithClickEvents": "off",
+        "useSemanticElements": "off",
+        "useMediaCaption": "off"
+      },
       "complexity": {
         "noBannedTypes": "error",
         "noUselessConstructor": "error"

@@ -410,6 +410,33 @@ html.dark,
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
+.canvas-file-video {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 4px;
+    object-fit: contain;
+}
+
+.canvas-file-audio-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.canvas-file-audio {
+    width: 100%;
+}
+
+.canvas-file-pdf {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0 0 8px 8px;
+}
+
 .canvas-file-fallback {
     display: flex;
     align-items: center;

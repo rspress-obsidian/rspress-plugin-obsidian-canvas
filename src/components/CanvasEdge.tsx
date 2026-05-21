@@ -5,7 +5,7 @@ interface Point {
   y: number;
 }
 
-function getEdgePoint(node: CanvasNode, side: string | undefined): Point {
+export function getEdgePoint(node: CanvasNode, side: string | undefined): Point {
   switch (side) {
     case 'top':
       return { x: node.x + node.width / 2, y: node.y };
@@ -20,7 +20,7 @@ function getEdgePoint(node: CanvasNode, side: string | undefined): Point {
   }
 }
 
-function getControlPoints(
+export function getControlPoints(
   start: Point,
   end: Point,
   fromSide: string | undefined,
@@ -121,16 +121,28 @@ export function CanvasEdge({ edge, nodeMap, isHighlighted }: CanvasEdgeProps) {
         markerStart={hasStartArrow ? `url(#arrowhead-start-${edge.id})` : undefined}
       />
       {edge.label && (
-        <text
-          x={(start.x + end.x) / 2}
-          y={(start.y + end.y) / 2 - 8}
-          fill={isHighlighted ? '#333333' : '#666666'}
-          fontSize={12}
-          fontWeight={isHighlighted ? 500 : 400}
-          textAnchor="middle"
-          style={{ pointerEvents: 'none' }}>
-          {edge.label}
-        </text>
+        <g style={{ pointerEvents: 'none' }}>
+          <rect
+            x={(start.x + end.x) / 2 - (edge.label.length * 3.6) - 6}
+            y={(start.y + end.y) / 2 - 20}
+            width={edge.label.length * 7.2 + 12}
+            height={20}
+            rx={4}
+            ry={4}
+            fill="var(--canvas-edge-label-bg)"
+            stroke={isHighlighted ? 'var(--canvas-accent)' : 'var(--canvas-node-border)'}
+            strokeWidth={1}
+          />
+          <text
+            x={(start.x + end.x) / 2}
+            y={(start.y + end.y) / 2 - 7}
+            fill={isHighlighted ? '#333333' : '#666666'}
+            fontSize={12}
+            fontWeight={isHighlighted ? 500 : 400}
+            textAnchor="middle">
+            {edge.label}
+          </text>
+        </g>
       )}
     </g>
   );

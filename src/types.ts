@@ -30,6 +30,9 @@ export interface CanvasFileData extends CanvasNodeData {
   fileContent?: string;
   imageUrl?: string;
   isImage?: boolean;
+  isVideo?: boolean;
+  isAudio?: boolean;
+  isPdf?: boolean;
   isError?: boolean;
 }
 

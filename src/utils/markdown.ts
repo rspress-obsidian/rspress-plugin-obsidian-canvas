@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import { sanitizeHtml } from './sanitize';
 
 marked.setOptions({
   gfm: true,
@@ -7,18 +8,21 @@ marked.setOptions({
 
 const WIKI_LINK_REGEX = /\[\[([^\]|]+)\|([^\]]+)\]\]/g;
 const WIKI_LINK_SIMPLE_REGEX = /\[\[([^\]]+)\]\]/g;
+const WIKI_DELIM_START = '\u{2400}';
+const WIKI_DELIM_END = '\u{2401}';
 
 function preprocessWikiLinks(text: string): string {
   return text
-    .replace(WIKI_LINK_REGEX, '\x00WIKILINK:$2:/$1\x01')
-    .replace(WIKI_LINK_SIMPLE_REGEX, '\x00WIKILINK:$1:/$1\x01');
+    .replace(WIKI_LINK_REGEX, `${WIKI_DELIM_START}WIKILINK:$2:/$1${WIKI_DELIM_END}`)
+    .replace(WIKI_LINK_SIMPLE_REGEX, `${WIKI_DELIM_START}WIKILINK:$1:/$1${WIKI_DELIM_END}`);
 }
 
 function postprocessWikiLinks(html: string): string {
-  return html.replace(
-    /\x00WIKILINK:([^:]+):([^\x01]+)\x01/g,
-    '<a href="$2" class="wiki-link">$1</a>',
+  const pattern = new RegExp(
+    `${WIKI_DELIM_START}WIKILINK:([^:]+):([^${WIKI_DELIM_END}]+)${WIKI_DELIM_END}`,
+    'g',
   );
+  return html.replace(pattern, '<a href="$2" class="wiki-link">$1</a>');
 }
 
 function escapeHtml(text: string): string {
@@ -52,5 +56,5 @@ export function renderMarkdown(text: string): string {
   const preprocessed = preprocessWikiLinks(text);
   const sanitized = sanitizeInput(preprocessed);
   const html = marked.parse(sanitized, { async: false }) as string;
-  return postprocessWikiLinks(html);
+  return sanitizeHtml(postprocessWikiLinks(html));
 }
