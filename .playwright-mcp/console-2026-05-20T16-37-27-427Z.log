@@ -1,3 +1,0 @@
-[      33ms] [INFO] [rsbuild] WebSocket connecting... @ http://localhost:3000/static/js/vendors-node_modules_react-lazy-with-preload_lib_index_js-node_modules_rsbuild_core_dist_clie-2195c5.js:2070
-[      47ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/static/js/lib-react.js:28357
-[      54ms] [INFO] [rsbuild] WebSocket connected. @ http://localhost:3000/static/js/vendors-node_modules_react-lazy-with-preload_lib_index_js-node_modules_rsbuild_core_dist_clie-2195c5.js:2070
