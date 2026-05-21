@@ -27,6 +27,10 @@ export interface CanvasFileData extends CanvasNodeData {
   type: 'file';
   file: string;
   subpath?: string;
+  fileContent?: string;
+  imageUrl?: string;
+  isImage?: boolean;
+  isError?: boolean;
 }
 
 export interface CanvasLinkData extends CanvasNodeData {

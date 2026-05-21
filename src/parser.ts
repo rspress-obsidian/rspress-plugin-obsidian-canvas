@@ -1,4 +1,4 @@
-import type { CanvasData, CanvasNode, CanvasEdgeData } from './types';
+import type { CanvasData, CanvasEdgeData, CanvasNode } from './types';
 
 export class CanvasParseError extends Error {
   constructor(message: string) {
@@ -59,7 +59,11 @@ function validateNode(node: unknown): CanvasNode {
     case 'file': {
       const file = assertString(n.file, 'node.file');
       const subpath = assertOptionalString(n.subpath, 'node.subpath');
-      return { ...base, type: 'file', file, subpath };
+      const fileContent = assertOptionalString(n.fileContent, 'node.fileContent');
+      const imageUrl = assertOptionalString(n.imageUrl, 'node.imageUrl');
+      const isImage = n.isImage !== undefined ? Boolean(n.isImage) : undefined;
+      const isError = n.isError !== undefined ? Boolean(n.isError) : undefined;
+      return { ...base, type: 'file', file, subpath, fileContent, imageUrl, isImage, isError };
     }
     case 'link': {
       const url = assertString(n.url, 'node.url');
@@ -69,7 +73,13 @@ function validateNode(node: unknown): CanvasNode {
       const label = assertOptionalString(n.label, 'node.label');
       const background = assertOptionalString(n.background, 'node.background');
       const backgroundStyle = assertOptionalString(n.backgroundStyle, 'node.backgroundStyle');
-      return { ...base, type: 'group', label, background, backgroundStyle: backgroundStyle as 'cover' | 'ratio' | 'repeat' | undefined };
+      return {
+        ...base,
+        type: 'group',
+        label,
+        background,
+        backgroundStyle: backgroundStyle as 'cover' | 'ratio' | 'repeat' | undefined,
+      };
     }
     default:
       throw new CanvasParseError(`Unhandled node type: ${type}`);
@@ -157,7 +167,7 @@ export function parseCanvas(json: string): CanvasData {
     }
   }
 
-  const nodeIds = new Set(nodes.map(n => n.id));
+  const nodeIds = new Set(nodes.map((n) => n.id));
   for (const edge of edges) {
     if (!nodeIds.has(edge.fromNode)) {
       throw new CanvasParseError(`Edge ${edge.id} references unknown fromNode: ${edge.fromNode}`);

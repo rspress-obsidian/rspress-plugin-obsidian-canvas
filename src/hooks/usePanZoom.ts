@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface Viewport {
   x: number;
@@ -10,29 +10,53 @@ export function usePanZoom() {
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
   const isPanning = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
-  const cachedRect = useRef<DOMRect | null>(null);
+  const containerRef = useRef<HTMLElement | null>(null);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const isInside =
-      e.clientX >= rect.left &&
-      e.clientX <= rect.right &&
-      e.clientY >= rect.top &&
-      e.clientY <= rect.bottom;
-    if (!isInside) return;
-    e.preventDefault();
-    const zoomFactor = e.deltaY > 0 ? -0.1 : 0.1;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    setViewport(prev => {
-      const newZoom = Math.max(0.1, Math.min(5, prev.zoom + zoomFactor));
-      const scale = newZoom / prev.zoom;
-      return {
-        x: mouseX - scale * (mouseX - prev.x),
-        y: mouseY - scale * (mouseY - prev.y),
-        zoom: newZoom,
-      };
-    });
+  // Native wheel handler — bypasses React's passive listener default
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      // Check if wheel target is inside a scrollable element
+      let target = e.target as HTMLElement | null;
+      while (target && target !== el) {
+        const style = getComputedStyle(target);
+        const overflowY = style.overflowY;
+        const _overflowX = style.overflowX;
+        const isScrollable =
+          (overflowY === 'auto' || overflowY === 'scroll') &&
+          target.scrollHeight > target.clientHeight;
+        if (isScrollable) {
+          // Let the scrollable element handle the wheel event
+          return;
+        }
+        target = target.parentElement;
+      }
+
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const zoomFactor = e.deltaY > 0 ? -0.1 : 0.1;
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      setViewport((prev) => {
+        const newZoom = Math.max(0.1, Math.min(5, prev.zoom + zoomFactor));
+        const scale = newZoom / prev.zoom;
+        return {
+          x: mouseX - scale * (mouseX - prev.x),
+          y: mouseY - scale * (mouseY - prev.y),
+          zoom: newZoom,
+        };
+      });
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Ref callback for the viewport element
+  const setContainerRef = useCallback((node: HTMLElement | null) => {
+    containerRef.current = node;
   }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -48,7 +72,7 @@ export function usePanZoom() {
     const dx = e.clientX - lastPointer.current.x;
     const dy = e.clientY - lastPointer.current.y;
     lastPointer.current = { x: e.clientX, y: e.clientY };
-    setViewport(prev => ({
+    setViewport((prev) => ({
       ...prev,
       x: prev.x + dx,
       y: prev.y + dy,
@@ -61,14 +85,21 @@ export function usePanZoom() {
 
   const transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
 
-  const zoomIn = useCallback(() => setViewport(p => ({ ...p, zoom: Math.min(5, +(p.zoom + 0.1).toFixed(1)) })), []);
-  const zoomOut = useCallback(() => setViewport(p => ({ ...p, zoom: Math.max(0.1, +(p.zoom - 0.1).toFixed(1)) })), []);
-  const resetZoom = useCallback(() => setViewport(p => ({ ...p, zoom: 1, x: 0, y: 0 })), []);
+  const zoomIn = useCallback(
+    () => setViewport((p) => ({ ...p, zoom: Math.min(5, +(p.zoom + 0.1).toFixed(1)) })),
+    [],
+  );
+  const zoomOut = useCallback(
+    () => setViewport((p) => ({ ...p, zoom: Math.max(0.1, +(p.zoom - 0.1).toFixed(1)) })),
+    [],
+  );
+  const resetZoom = useCallback(() => setViewport((p) => ({ ...p, zoom: 1, x: 0, y: 0 })), []);
 
   return {
     viewport,
+    setViewport,
     transform,
-    handleWheel,
+    setContainerRef,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
