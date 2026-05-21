@@ -1,0 +1,26 @@
+# Auto-detect text files and perform lf normalization
+* text=auto
+
+# Explicitly declare text files you want to always be normalized
+*.ts text
+*.tsx text
+*.js text
+*.jsx text
+*.json text
+*.css text
+*.md text
+*.mdx text
+*.html text
+*.yml text
+*.yaml text
+*.toml text
+
+# Denote all files that are binary in nature
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg binary
+*.ico binary
+*.canvas binary
+*.lock binary
