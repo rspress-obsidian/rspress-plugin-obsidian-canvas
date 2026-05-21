@@ -35,4 +35,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # playwright
 .playwright-mcp
-.claude
+Obsidian Vault
+
+# rspress build output
+doc_build
