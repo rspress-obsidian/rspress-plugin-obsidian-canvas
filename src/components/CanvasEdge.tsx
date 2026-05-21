@@ -82,13 +82,13 @@ function resolveColor(color: string | undefined): string {
 
 interface CanvasEdgeProps {
   edge: CanvasEdgeData;
-  nodes: CanvasNode[];
+  nodeMap: Map<string, CanvasNode>;
   isHighlighted?: boolean;
 }
 
-export function CanvasEdge({ edge, nodes, isHighlighted }: CanvasEdgeProps) {
-  const fromNode = nodes.find(n => n.id === edge.fromNode);
-  const toNode = nodes.find(n => n.id === edge.toNode);
+export function CanvasEdge({ edge, nodeMap, isHighlighted }: CanvasEdgeProps) {
+  const fromNode = nodeMap.get(edge.fromNode);
+  const toNode = nodeMap.get(edge.toNode);
 
   if (!fromNode || !toNode) return null;
 

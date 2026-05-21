@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { CanvasNode } from '../types';
 import { renderMarkdown } from '../utils/markdown';
 import { resolveFileRoute } from '../utils/resolver';
@@ -40,6 +41,8 @@ export function CanvasNodeComponent({ node, isHovered, fileRoutePrefix, linkPrev
         borderLeftColor: node.type === 'group' ? undefined : borderColor,
       }}
       className={`canvas-node canvas-node-${node.type} ${isHovered ? 'canvas-node-hovered' : ''}`}
+      role={node.type === 'group' ? 'group' : 'article'}
+      aria-label={node.type === 'text' ? 'Text node' : node.type === 'file' ? `File: ${node.file}` : node.type === 'link' ? `Link: ${node.url}` : node.type === 'group' ? node.label || 'Group' : 'Canvas node'}
       onMouseEnter={() => onHover?.(node.id)}
       onMouseLeave={() => onHover?.(null)}
     >
@@ -49,6 +52,11 @@ export function CanvasNodeComponent({ node, isHovered, fileRoutePrefix, linkPrev
 }
 
 function NodeContent({ node, isHovered, fileRoutePrefix, linkPreview }: { node: CanvasNode; isHovered?: boolean; fileRoutePrefix?: string; linkPreview?: boolean }) {
+  const renderedMarkdown = useMemo(
+    () => node.type === 'text' ? renderMarkdown(node.text || '') : '',
+    [node.type, 'text' in node ? node.text : '']
+  );
+
   switch (node.type) {
     case 'text':
       return (
@@ -63,7 +71,7 @@ function NodeContent({ node, isHovered, fileRoutePrefix, linkPreview }: { node: 
               height: '100%',
               overflow: 'auto',
             }}
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(node.text || '') }}
+            dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
           />
         </div>
       );

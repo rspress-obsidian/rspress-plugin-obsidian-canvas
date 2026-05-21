@@ -10,6 +10,7 @@ export function usePanZoom() {
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
   const isPanning = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
+  const cachedRect = useRef<DOMRect | null>(null);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -21,12 +22,11 @@ export function usePanZoom() {
     if (!isInside) return;
     e.preventDefault();
     const zoomFactor = e.deltaY > 0 ? -0.1 : 0.1;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
     setViewport(prev => {
       const newZoom = Math.max(0.1, Math.min(5, prev.zoom + zoomFactor));
       const scale = newZoom / prev.zoom;
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
       return {
         x: mouseX - scale * (mouseX - prev.x),
         y: mouseY - scale * (mouseY - prev.y),
@@ -60,10 +60,6 @@ export function usePanZoom() {
   }, []);
 
   const transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
-
-  const setZoom = useCallback((zoom: number) => {
-    setViewport(prev => ({ ...prev, zoom: Math.max(0.1, Math.min(5, zoom)) }));
-  }, []);
 
   const zoomIn = useCallback(() => setViewport(p => ({ ...p, zoom: Math.min(5, +(p.zoom + 0.1).toFixed(1)) })), []);
   const zoomOut = useCallback(() => setViewport(p => ({ ...p, zoom: Math.max(0.1, +(p.zoom - 0.1).toFixed(1)) })), []);

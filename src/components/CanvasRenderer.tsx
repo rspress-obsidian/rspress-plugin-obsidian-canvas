@@ -24,24 +24,37 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
     resetZoom,
   } = usePanZoom();
 
-  const connectedEdgeIds = new Set<string>();
-  if (hoveredNodeId) {
+  const nodeMap = useMemo(() => {
+    const map = new Map<string, CanvasData['nodes'][number]>();
+    for (const node of data.nodes) {
+      map.set(node.id, node);
+    }
+    return map;
+  }, [data.nodes]);
+
+  const connectedEdgeIds = useMemo(() => {
+    if (!hoveredNodeId) return new Set<string>();
+    const ids = new Set<string>();
     for (const edge of data.edges) {
       if (edge.fromNode === hoveredNodeId || edge.toNode === hoveredNodeId) {
-        connectedEdgeIds.add(edge.id);
+        ids.add(edge.id);
       }
     }
-  }
+    return ids;
+  }, [hoveredNodeId, data.edges]);
 
   const handleNodeHover = useCallback((nodeId: string | null) => {
     setHoveredNodeId(nodeId);
   }, []);
 
-  const sortedNodes = [...data.nodes].sort((a, b) => {
-    if (a.type === 'group' && b.type !== 'group') return -1;
-    if (b.type === 'group' && a.type !== 'group') return 1;
-    return 0;
-  });
+  const sortedNodes = useMemo(() =>
+    [...data.nodes].sort((a, b) => {
+      if (a.type === 'group' && b.type !== 'group') return -1;
+      if (b.type === 'group' && a.type !== 'group') return 1;
+      return 0;
+    }),
+    [data.nodes]
+  );
 
   const canvasBounds = useMemo(() => {
     if (data.nodes.length === 0) return { x: 0, y: 0, w: 1, h: 1 };
@@ -65,6 +78,9 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
     <div className="canvas-container">
       <div
         className="canvas-viewport"
+        role="application"
+        aria-label="Interactive canvas with nodes and connections"
+        tabIndex={0}
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -80,6 +96,7 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
               width: canvasBounds.w,
               height: canvasBounds.h,
             }}
+            aria-hidden="true"
           >
             <defs>
               {data.edges.map((edge) => {
@@ -114,7 +131,7 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
               <CanvasEdge
                 key={edge.id}
                 edge={edge}
-                nodes={data.nodes}
+                nodeMap={nodeMap}
                 isHighlighted={connectedEdgeIds.has(edge.id)}
               />
             ))}
@@ -131,9 +148,9 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
           ))}
         </div>
       </div>
-      <div className="canvas-toolbar">
+      <div className="canvas-toolbar" role="toolbar" aria-label="Canvas zoom controls">
         <button className="canvas-toolbar-btn" onClick={zoomOut} aria-label="Zoom out">−</button>
-        <span className="canvas-zoom-level">{Math.round(viewport.zoom * 100)}%</span>
+        <span className="canvas-zoom-level" aria-live="polite">{Math.round(viewport.zoom * 100)}%</span>
         <button className="canvas-toolbar-btn" onClick={zoomIn} aria-label="Zoom in">+</button>
         <div className="canvas-toolbar-sep" />
         <button className="canvas-toolbar-btn" onClick={resetZoom} aria-label="Reset zoom">1:1</button>
