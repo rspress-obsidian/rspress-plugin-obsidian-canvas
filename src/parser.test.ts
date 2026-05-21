@@ -1,8 +1,19 @@
 import { expect, test } from 'bun:test';
-import { CanvasParseError, parseCanvas } from '../src/parser';
+import { CanvasParseError, parseCanvas } from './parser';
+import type { CanvasEdgeData, CanvasNode } from './types';
 
 const validCanvas = JSON.stringify({
-  nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'hello' }],
+  nodes: [
+    {
+      id: 'n1',
+      type: 'text',
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      text: 'hello',
+    },
+  ],
   edges: [],
 });
 
@@ -22,7 +33,15 @@ test('parses canvas with missing nodes/edges arrays', () => {
 test('parses all four node types', () => {
   const json = JSON.stringify({
     nodes: [
-      { id: 't1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'hello' },
+      {
+        id: 't1',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'hello',
+      },
       {
         id: 'f1',
         type: 'file',
@@ -33,7 +52,15 @@ test('parses all four node types', () => {
         file: 'Note.md',
         subpath: '#heading',
       },
-      { id: 'l1', type: 'link', x: 0, y: 0, width: 100, height: 100, url: 'https://example.com' },
+      {
+        id: 'l1',
+        type: 'link',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        url: 'https://example.com',
+      },
       {
         id: 'g1',
         type: 'group',
@@ -55,19 +82,19 @@ test('parses all four node types', () => {
   expect(data.nodes[2]?.type).toBe('link');
   expect(data.nodes[3]?.type).toBe('group');
 
-  const textNode = data.nodes[0]!;
+  const textNode = data.nodes[0] as CanvasNode;
   if (textNode.type === 'text') expect(textNode.text).toBe('hello');
 
-  const fileNode = data.nodes[1]!;
+  const fileNode = data.nodes[1] as CanvasNode;
   if (fileNode.type === 'file') {
     expect(fileNode.file).toBe('Note.md');
     expect(fileNode.subpath).toBe('#heading');
   }
 
-  const linkNode = data.nodes[2]!;
+  const linkNode = data.nodes[2] as CanvasNode;
   if (linkNode.type === 'link') expect(linkNode.url).toBe('https://example.com');
 
-  const groupNode = data.nodes[3]!;
+  const groupNode = data.nodes[3] as CanvasNode;
   if (groupNode.type === 'group') {
     expect(groupNode.label).toBe('Group');
     expect(groupNode.background).toBe('bg.png');
@@ -78,7 +105,16 @@ test('parses all four node types', () => {
 test('parses optional fields correctly', () => {
   const json = JSON.stringify({
     nodes: [
-      { id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'hi', color: '4' },
+      {
+        id: 'n1',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'hi',
+        color: '4',
+      },
     ],
     edges: [
       {
@@ -96,7 +132,7 @@ test('parses optional fields correctly', () => {
   });
   const data = parseCanvas(json);
   expect(data.nodes[0]?.color).toBe('4');
-  const edge = data.edges[0]!;
+  const edge = data.edges[0] as CanvasEdgeData;
   expect(edge.fromSide).toBe('right');
   expect(edge.toSide).toBe('left');
   expect(edge.fromEnd).toBe('arrow');
@@ -107,11 +143,21 @@ test('parses optional fields correctly', () => {
 
 test('edge defaults: missing fromSide/toSide/fromEnd/toEnd are undefined', () => {
   const json = JSON.stringify({
-    nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'hi' }],
+    nodes: [
+      {
+        id: 'n1',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'hi',
+      },
+    ],
     edges: [{ id: 'e1', fromNode: 'n1', toNode: 'n1' }],
   });
   const data = parseCanvas(json);
-  const edge = data.edges[0]!;
+  const edge = data.edges[0] as CanvasEdgeData;
   expect(edge.fromSide).toBeUndefined();
   expect(edge.toSide).toBeUndefined();
   expect(edge.fromEnd).toBeUndefined();
@@ -181,7 +227,17 @@ test('throws on missing url for link node', () => {
 
 test('throws on invalid fromSide', () => {
   const json = JSON.stringify({
-    nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'hi' }],
+    nodes: [
+      {
+        id: 'n1',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'hi',
+      },
+    ],
     edges: [{ id: 'e1', fromNode: 'n1', toNode: 'n1', fromSide: 'center' }],
   });
   expect(() => parseCanvas(json)).toThrow(/Invalid fromSide/);
@@ -189,7 +245,17 @@ test('throws on invalid fromSide', () => {
 
 test('throws on invalid toSide', () => {
   const json = JSON.stringify({
-    nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'hi' }],
+    nodes: [
+      {
+        id: 'n1',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'hi',
+      },
+    ],
     edges: [{ id: 'e1', fromNode: 'n1', toNode: 'n1', toSide: 'middle' }],
   });
   expect(() => parseCanvas(json)).toThrow(/Invalid toSide/);
@@ -197,7 +263,17 @@ test('throws on invalid toSide', () => {
 
 test('throws on invalid fromEnd', () => {
   const json = JSON.stringify({
-    nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'hi' }],
+    nodes: [
+      {
+        id: 'n1',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'hi',
+      },
+    ],
     edges: [{ id: 'e1', fromNode: 'n1', toNode: 'n1', fromEnd: 'circle' }],
   });
   expect(() => parseCanvas(json)).toThrow(/Invalid fromEnd/);
@@ -205,7 +281,17 @@ test('throws on invalid fromEnd', () => {
 
 test('throws on invalid toEnd', () => {
   const json = JSON.stringify({
-    nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'hi' }],
+    nodes: [
+      {
+        id: 'n1',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'hi',
+      },
+    ],
     edges: [{ id: 'e1', fromNode: 'n1', toNode: 'n1', toEnd: 'diamond' }],
   });
   expect(() => parseCanvas(json)).toThrow(/Invalid toEnd/);
@@ -213,7 +299,17 @@ test('throws on invalid toEnd', () => {
 
 test('throws when edge references nonexistent node', () => {
   const json = JSON.stringify({
-    nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'hi' }],
+    nodes: [
+      {
+        id: 'n1',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'hi',
+      },
+    ],
     edges: [{ id: 'e1', fromNode: 'n1', toNode: 'ghost' }],
   });
   expect(() => parseCanvas(json)).toThrow(/references unknown.*toNode/);
@@ -221,7 +317,17 @@ test('throws when edge references nonexistent node', () => {
 
 test('throws when edge references nonexistent fromNode', () => {
   const json = JSON.stringify({
-    nodes: [{ id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'hi' }],
+    nodes: [
+      {
+        id: 'n1',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'hi',
+      },
+    ],
     edges: [{ id: 'e1', fromNode: 'ghost', toNode: 'n1' }],
   });
   expect(() => parseCanvas(json)).toThrow(/references unknown.*fromNode/);
@@ -229,7 +335,17 @@ test('throws when edge references nonexistent fromNode', () => {
 
 test('x, y, width, height must be finite numbers', () => {
   const json = JSON.stringify({
-    nodes: [{ id: 'n1', type: 'text', x: NaN, y: 0, width: 100, height: 100, text: 'hi' }],
+    nodes: [
+      {
+        id: 'n1',
+        type: 'text',
+        x: NaN,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'hi',
+      },
+    ],
     edges: [],
   });
   expect(() => parseCanvas(json)).toThrow(/node\.x.*number/);
@@ -238,8 +354,26 @@ test('x, y, width, height must be finite numbers', () => {
 test('color can be hex, preset, or rgb', () => {
   const json = JSON.stringify({
     nodes: [
-      { id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'a', color: '#ff0000' },
-      { id: 'n2', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'b', color: '3' },
+      {
+        id: 'n1',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'a',
+        color: '#ff0000',
+      },
+      {
+        id: 'n2',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        text: 'b',
+        color: '3',
+      },
       {
         id: 'n3',
         type: 'text',
@@ -261,11 +395,21 @@ test('color can be hex, preset, or rgb', () => {
 
 test('subpath is optional on file nodes', () => {
   const json = JSON.stringify({
-    nodes: [{ id: 'n1', type: 'file', x: 0, y: 0, width: 100, height: 100, file: 'Note.md' }],
+    nodes: [
+      {
+        id: 'n1',
+        type: 'file',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        file: 'Note.md',
+      },
+    ],
     edges: [],
   });
   const data = parseCanvas(json);
-  const node = data.nodes[0]!;
+  const node = data.nodes[0] as CanvasNode;
   if (node.type === 'file') expect(node.subpath).toBeUndefined();
 });
 
@@ -275,7 +419,7 @@ test('label and background are optional on group nodes', () => {
     edges: [],
   });
   const data = parseCanvas(json);
-  const node = data.nodes[0]!;
+  const node = data.nodes[0] as CanvasNode;
   if (node.type === 'group') {
     expect(node.label).toBeUndefined();
     expect(node.background).toBeUndefined();
@@ -301,7 +445,7 @@ test('parses enriched file node fields', () => {
     edges: [],
   });
   const data = parseCanvas(json);
-  const node = data.nodes[0]!;
+  const node = data.nodes[0] as CanvasNode;
   if (node.type === 'file') {
     expect(node.fileContent).toBe('Hello world content');
     expect(node.imageUrl).toBe('data:image/png;base64,123');
