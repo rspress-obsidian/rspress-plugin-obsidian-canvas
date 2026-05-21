@@ -8,7 +8,10 @@ export function resolveFileRoute(filePath: string, prefix?: string): string {
     return filePath.startsWith('/') ? filePath : `/${filePath}`;
   }
 
-  const clean = filePath.replace(/\.\w+$/i, '').replace(/\s+/g, '-').toLowerCase();
+  const clean = filePath
+    .replace(/\.\w+$/i, '')
+    .replace(/\s+/g, '-')
+    .toLowerCase();
   if (prefix) {
     return `${prefix}/${clean}`;
   }

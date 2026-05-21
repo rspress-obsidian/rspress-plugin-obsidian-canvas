@@ -20,7 +20,12 @@ function getEdgePoint(node: CanvasNode, side: string | undefined): Point {
   }
 }
 
-function getControlPoints(start: Point, end: Point, fromSide: string | undefined, toSide: string | undefined): [Point, Point] {
+function getControlPoints(
+  start: Point,
+  end: Point,
+  fromSide: string | undefined,
+  toSide: string | undefined,
+): [Point, Point] {
   const dx = Math.abs(end.x - start.x);
   const dy = Math.abs(end.y - start.y);
   const dist = Math.sqrt(dx * dx + dy * dy);
@@ -43,7 +48,7 @@ function getControlPoints(start: Point, end: Point, fromSide: string | undefined
       cp1.x -= tension;
       break;
     default:
-      cp1.x += (end.x > start.x ? tension : -tension);
+      cp1.x += end.x > start.x ? tension : -tension;
   }
 
   switch (toSide) {
@@ -60,22 +65,22 @@ function getControlPoints(start: Point, end: Point, fromSide: string | undefined
       cp2.x -= tension;
       break;
     default:
-      cp2.x += (end.x > start.x ? -tension : tension);
+      cp2.x += end.x > start.x ? -tension : tension;
   }
 
   return [cp1, cp2];
 }
 
 function resolveColor(color: string | undefined): string {
-  if (!color) return '#999999';
-  if (color.startsWith('#') || color.startsWith('rgb')) return color;
+  if (!color) return 'var(--canvas-edge-color)';
+  if (color.startsWith('#') || color.startsWith('rgb') || color.startsWith('var')) return color;
   const presetColors: Record<string, string> = {
-    '1': '#e54d4d',
-    '2': '#e58c4d',
-    '3': '#e5c84d',
-    '4': '#4de54d',
-    '5': '#4dcee5',
-    '6': '#9b4de5',
+    '1': 'var(--canvas-color-1)',
+    '2': 'var(--canvas-color-2)',
+    '3': 'var(--canvas-color-3)',
+    '4': 'var(--canvas-color-4)',
+    '5': 'var(--canvas-color-5)',
+    '6': 'var(--canvas-color-6)',
   };
   return presetColors[color] || color;
 }
@@ -123,8 +128,7 @@ export function CanvasEdge({ edge, nodeMap, isHighlighted }: CanvasEdgeProps) {
           fontSize={12}
           fontWeight={isHighlighted ? 500 : 400}
           textAnchor="middle"
-          style={{ pointerEvents: 'none' }}
-        >
+          style={{ pointerEvents: 'none' }}>
           {edge.label}
         </text>
       )}

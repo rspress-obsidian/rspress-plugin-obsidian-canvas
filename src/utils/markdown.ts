@@ -15,7 +15,10 @@ function preprocessWikiLinks(text: string): string {
 }
 
 function postprocessWikiLinks(html: string): string {
-  return html.replace(/\x00WIKILINK:([^:]+):([^\x01]+)\x01/g, '<a href="$2" class="wiki-link">$1</a>');
+  return html.replace(
+    /\x00WIKILINK:([^:]+):([^\x01]+)\x01/g,
+    '<a href="$2" class="wiki-link">$1</a>',
+  );
 }
 
 function escapeHtml(text: string): string {
@@ -28,17 +31,19 @@ function escapeHtml(text: string): string {
 
 function sanitizeInput(text: string): string {
   const lines = text.split('\n');
-  return lines.map(line => {
-    if (line.startsWith('```')) return line;
-    if (line.match(/^\s*[-*]\s+\[[ x]\]/)) return line;
-    if (line.match(/^\s*[-*]\s+/)) return line;
-    if (line.match(/^\s*\d+\.\s+/)) return line;
-    if (line.match(/^#{1,6}\s+/)) return line;
-    if (line.startsWith('>')) return line;
-    if (line.match(/^\|/)) return line;
-    if (line.startsWith('---') || line.startsWith('***') || line.startsWith('___')) return line;
-    return escapeHtml(line);
-  }).join('\n');
+  return lines
+    .map((line) => {
+      if (line.startsWith('```')) return line;
+      if (line.match(/^\s*[-*]\s+\[[ x]\]/)) return line;
+      if (line.match(/^\s*[-*]\s+/)) return line;
+      if (line.match(/^\s*\d+\.\s+/)) return line;
+      if (line.match(/^#{1,6}\s+/)) return line;
+      if (line.startsWith('>')) return line;
+      if (line.match(/^\|/)) return line;
+      if (line.startsWith('---') || line.startsWith('***') || line.startsWith('___')) return line;
+      return escapeHtml(line);
+    })
+    .join('\n');
 }
 
 export function renderMarkdown(text: string): string {
