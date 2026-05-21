@@ -33,7 +33,7 @@
     "json-canvas"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && bun scripts/build-css.ts",
     "dev": "tsup --watch",
     "docs:dev": "rspress dev",
     "docs:build": "rspress build",
@@ -60,6 +60,7 @@
     "@types/bun": "latest",
     "@types/react": "^18.3.29",
     "@types/react-dom": "^18.3.7",
+    "lightningcss": "^1.32.0",
     "tsup": "^8.5.1"
   },
   "license": "MIT",
