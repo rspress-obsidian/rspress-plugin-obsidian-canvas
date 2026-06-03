@@ -6,8 +6,13 @@ out/
 dist/
 *.tgz
 
-# --- Rspress docs build ---
+# --- Rspress ---
 doc_build/
+.rspress/
+docs/public/__canvases__/
+
+# --- Artifacts from incorrect embed JSON output (path resolution bug) ---
+home/
 
 # --- Code coverage ---
 coverage/
@@ -15,10 +20,18 @@ coverage/
 
 # --- Logs ---
 logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 *.log
 
 # --- Environment files ---
 .env
+.env.development
+.env.production
+.env.test
+.env.local
 .env.*.local
 
 # --- Cache directories ---
@@ -28,8 +41,11 @@ logs/
 
 # --- Editor / IDE ---
 .idea/
+.vscode/
 *.swp
 *.swo
+*.swn
+*~
 
 # --- OS files ---
 .DS_Store
@@ -42,3 +58,6 @@ playwright-report/
 
 # --- OpenCode ---
 .omo/
+
+# --- CommandCode ---
+.commandcode/

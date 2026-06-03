@@ -65,12 +65,12 @@ test('renders images', () => {
 
 test('renders wiki-links without display text', () => {
   const html = renderMarkdown('[[My Note]]');
-  expect(html).toContain('<a href="/My Note" class="wiki-link">My Note</a>');
+  expect(html).toContain('<a href="/my-note" class="wiki-link">My Note</a>');
 });
 
 test('renders wiki-links with display text', () => {
   const html = renderMarkdown('[[My Note|Click Here]]');
-  expect(html).toContain('<a href="/My Note" class="wiki-link">Click Here</a>');
+  expect(html).toContain('<a href="/my-note" class="wiki-link">Click Here</a>');
 });
 
 test('renders horizontal rules', () => {
@@ -110,10 +110,11 @@ test('consecutive list items merge into one list', () => {
   expect(ulCount).toBe(1);
 });
 
-test('escapes HTML in text', () => {
+test('removes malicious HTML via DOMPurify', () => {
   const html = renderMarkdown("<script>alert('xss')</script>");
   expect(html).not.toContain('<script>');
-  expect(html).toContain('&lt;script&gt;');
+  expect(html).not.toContain('&lt;script&gt;');
+  expect(html).not.toContain('alert');
 });
 
 test('renders multi-paragraph text', () => {
@@ -178,4 +179,32 @@ test('renders tables', () => {
   expect(html).toContain('<table>');
   expect(html).toContain('<th>A</th>');
   expect(html).toContain('<td>1</td>');
+});
+
+test('renders Obsidian highlights', () => {
+  const html = renderMarkdown('This is ==highlighted text== in a sentence.');
+  expect(html).toContain('<mark>highlighted text</mark>');
+});
+
+test('renders Obsidian callouts', () => {
+  const html = renderMarkdown('> [!info] My Title\n> This is the content.');
+  expect(html).toContain('class="callout"');
+  expect(html).toContain('data-callout="info"');
+  expect(html).toContain('callout-title');
+  expect(html).toContain('My Title');
+  expect(html).toContain('callout-content');
+  expect(html).toContain('This is the content.');
+});
+
+test('renders Obsidian callouts without title', () => {
+  const html = renderMarkdown('> [!warning]\n> Just a warning.');
+  expect(html).toContain('data-callout="warning"');
+  expect(html).toContain('Just a warning.');
+});
+
+test('renders Obsidian callouts with fold modifier', () => {
+  const html = renderMarkdown('> [!note]- Collapsed Note\n> Hidden content.');
+  expect(html).toContain('data-callout="note"');
+  expect(html).toContain('data-callout-fold="-"');
+  expect(html).toContain('Collapsed Note');
 });

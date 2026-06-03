@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { CanvasNode } from '../types';
+import { resolveColor, resolveNodeBgColor } from '../utils/color';
 import { renderMarkdown } from '../utils/markdown';
 import { resolveFileRoute } from '../utils/resolver';
 
@@ -9,48 +10,12 @@ interface CanvasNodeProps {
   isSelected?: boolean;
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  iframeSandbox?: string;
   onHover?: (nodeId: string | null) => void;
   onClick?: (nodeId: string) => void;
-}
-
-function resolveColor(color: string | undefined): string {
-  if (!color) return 'var(--canvas-node-border)';
-  if (color.startsWith('#') || color.startsWith('rgb') || color.startsWith('var')) return color;
-  const presetColors: Record<string, string> = {
-    '1': 'var(--canvas-color-1)',
-    '2': 'var(--canvas-color-2)',
-    '3': 'var(--canvas-color-3)',
-    '4': 'var(--canvas-color-4)',
-    '5': 'var(--canvas-color-5)',
-    '6': 'var(--canvas-color-6)',
-  };
-  return presetColors[color] || color;
-}
-
-function resolveBgColor(color: string | undefined, type: string): string | undefined {
-  if (type === 'group') {
-    if (!color) return 'var(--canvas-group-bg)';
-    const presetBgs: Record<string, string> = {
-      '1': 'rgba(239, 68, 68, 0.03)',
-      '2': 'rgba(249, 115, 22, 0.03)',
-      '3': 'rgba(234, 179, 8, 0.03)',
-      '4': 'rgba(34, 197, 94, 0.03)',
-      '5': 'rgba(6, 182, 212, 0.03)',
-      '6': 'rgba(168, 85, 247, 0.03)',
-    };
-    return presetBgs[color] || 'var(--canvas-group-bg)';
-  } else {
-    if (!color) return 'var(--canvas-node-bg)';
-    const presetBgs: Record<string, string> = {
-      '1': 'var(--canvas-bg-color-1-tint)',
-      '2': 'var(--canvas-bg-color-2-tint)',
-      '3': 'var(--canvas-bg-color-3-tint)',
-      '4': 'var(--canvas-bg-color-4-tint)',
-      '5': 'var(--canvas-bg-color-5-tint)',
-      '6': 'var(--canvas-bg-color-6-tint)',
-    };
-    return presetBgs[color] || 'var(--canvas-node-bg)';
-  }
+  onKeyDown?: (e: React.KeyboardEvent, nodeId: string) => void;
+  onNodeDrag?: (nodeId: string, x: number, y: number) => void;
+  onNodeResize?: (nodeId: string, width: number, height: number) => void;
 }
 
 export function CanvasNodeComponent({
@@ -59,14 +24,119 @@ export function CanvasNodeComponent({
   isSelected,
   fileRoutePrefix,
   linkPreview,
+  iframeSandbox,
   onHover,
   onClick,
+  onKeyDown,
+  onNodeDrag,
+  onNodeResize,
 }: CanvasNodeProps) {
   const borderColor = resolveColor(node.color);
   const zIndex = node.type === 'group' ? 0 : 10;
 
+  const handleDragStart = (e: React.PointerEvent) => {
+    if (node.type === 'group') return;
+    e.stopPropagation();
+    e.preventDefault();
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startNodeX = node.x;
+    const startNodeY = node.y;
+
+    const viewport = document.querySelector('.canvas-viewport') as HTMLElement | null;
+    const zoom = viewport
+      ? Number.parseFloat(
+          getComputedStyle(document.querySelector('.canvas-world') as HTMLElement).scale || '1',
+        )
+      : 1;
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const dx = (moveEvent.clientX - startX) / zoom;
+      const dy = (moveEvent.clientY - startY) / zoom;
+      const newX = Math.round(startNodeX + dx);
+      const newY = Math.round(startNodeY + dy);
+      onNodeDrag?.(node.id, newX, newY);
+    };
+
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
+  const handleResizeStart =
+    (corner: 'nw' | 'ne' | 'sw' | 'se') => (e: React.PointerEvent) => {
+      if (node.type === 'group') return;
+      e.stopPropagation();
+      e.preventDefault();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startW = node.width;
+      const startH = node.height;
+      const startNodeX = node.x;
+      const startNodeY = node.y;
+
+      const viewport = document.querySelector('.canvas-viewport') as HTMLElement | null;
+      const zoom = viewport
+        ? Number.parseFloat(
+            getComputedStyle(document.querySelector('.canvas-world') as HTMLElement).scale || '1',
+          )
+        : 1;
+
+      const MIN_SIZE = 80;
+
+      const onMove = (moveEvent: PointerEvent) => {
+        const dx = (moveEvent.clientX - startX) / zoom;
+        const dy = (moveEvent.clientY - startY) / zoom;
+
+        let newW = startW;
+        let newH = startH;
+        let newX = startNodeX;
+        let newY = startNodeY;
+
+        if (corner.includes('e')) {
+          newW = Math.max(MIN_SIZE, Math.round(startW + dx));
+        }
+        if (corner.includes('w')) {
+          const rawW = startW - dx;
+          newW = Math.max(MIN_SIZE, Math.round(rawW));
+          newX = Math.round(startNodeX + (startW - newW));
+        }
+        if (corner.includes('s')) {
+          newH = Math.max(MIN_SIZE, Math.round(startH + dy));
+        }
+        if (corner.includes('n')) {
+          const rawH = startH - dy;
+          newH = Math.max(MIN_SIZE, Math.round(rawH));
+          newY = Math.round(startNodeY + (startH - newH));
+        }
+
+        onNodeResize?.(node.id, newW, newH);
+        if (corner.includes('w') || corner.includes('n')) {
+          onNodeDrag?.(node.id, newX, newY);
+        }
+      };
+
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    };
+
+  const canInteract = node.type !== 'group';
+  const showResizeHandles = isSelected && canInteract;
+
   return (
     <div
+      data-node-id={node.id}
       style={{
         position: 'absolute',
         left: node.x,
@@ -76,8 +146,9 @@ export function CanvasNodeComponent({
         zIndex: zIndex + (isHovered ? 100 : 0) + (isSelected ? 120 : 0),
         borderLeftColor: node.type === 'group' ? undefined : borderColor,
         borderColor: node.color && node.type !== 'group' ? borderColor : undefined,
-        backgroundColor: resolveBgColor(node.color, node.type),
-        overflow: node.type === 'group' ? 'visible' : 'hidden', // Allow group badges to overflow beautifully
+        backgroundColor: resolveNodeBgColor(node.color, node.type),
+        overflow: node.type === 'group' ? 'visible' : 'hidden',
+        cursor: canInteract ? 'grab' : 'default',
       }}
       className={`canvas-node canvas-node-${node.type} ${isHovered ? 'canvas-node-hovered' : ''} ${
         isSelected ? 'canvas-node-selected' : ''
@@ -97,8 +168,11 @@ export function CanvasNodeComponent({
       onMouseEnter={() => onHover?.(node.id)}
       onMouseLeave={() => onHover?.(null)}
       onPointerDown={(e) => {
-        // Prevent viewport pan/drag from starting when interacting with nodes
-        e.stopPropagation();
+        if (canInteract) {
+          handleDragStart(e);
+        } else {
+          e.stopPropagation();
+        }
       }}
       tabIndex={0}
       onKeyDown={(e) => {
@@ -106,6 +180,8 @@ export function CanvasNodeComponent({
           e.preventDefault();
           e.stopPropagation();
           onClick?.(node.id);
+        } else {
+          onKeyDown?.(e, node.id);
         }
       }}
       onClick={(e) => {
@@ -116,7 +192,28 @@ export function CanvasNodeComponent({
         node={node}
         fileRoutePrefix={fileRoutePrefix}
         linkPreview={linkPreview}
+        iframeSandbox={iframeSandbox}
       />
+      {showResizeHandles && (
+        <>
+          <div
+            className="canvas-resize-handle canvas-resize-nw"
+            onPointerDown={handleResizeStart('nw')}
+          />
+          <div
+            className="canvas-resize-handle canvas-resize-ne"
+            onPointerDown={handleResizeStart('ne')}
+          />
+          <div
+            className="canvas-resize-handle canvas-resize-sw"
+            onPointerDown={handleResizeStart('sw')}
+          />
+          <div
+            className="canvas-resize-handle canvas-resize-se"
+            onPointerDown={handleResizeStart('se')}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -125,16 +222,18 @@ function NodeContent({
   node,
   fileRoutePrefix,
   linkPreview,
+  iframeSandbox,
 }: {
   node: CanvasNode;
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  iframeSandbox?: string;
 }) {
   const borderColor = resolveColor(node.color);
 
   const renderedMarkdown = useMemo(
-    () => (node.type === 'text' ? renderMarkdown(node.text || '') : ''),
-    [node.type, node.text],
+    () => (node.type === 'text' ? renderMarkdown(node.text || '', fileRoutePrefix) : ''),
+    [node.type, node.text, fileRoutePrefix],
   );
 
   switch (node.type) {
@@ -303,7 +402,12 @@ function NodeContent({
               <span className="canvas-node-file-header-title">{node.file}</span>
             </div>
             <div className="canvas-node-file-body">
-              <iframe className="canvas-file-pdf" src={node.imageUrl} title={node.file} />
+              <iframe
+                className="canvas-file-pdf"
+                src={node.imageUrl}
+                title={node.file}
+                sandbox={iframeSandbox}
+              />
             </div>
           </div>
         );
@@ -311,7 +415,7 @@ function NodeContent({
 
       // Render markdown text content inline if enriched with file content
       if ('fileContent' in node && node.fileContent !== undefined) {
-        const fileMarkdown = renderMarkdown(node.fileContent);
+        const fileMarkdown = renderMarkdown(node.fileContent, fileRoutePrefix);
         return (
           <div className="canvas-node-content">
             <div
@@ -420,7 +524,7 @@ function NodeContent({
                   border: 'none',
                 }}
                 title={node.url}
-                sandbox="allow-scripts allow-same-origin allow-popups"
+                sandbox={iframeSandbox}
               />
             </div>
           </div>

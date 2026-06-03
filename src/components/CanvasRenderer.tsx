@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePanZoom } from '../hooks/usePanZoom';
-import type { CanvasData } from '../types';
+import type { CanvasData, CanvasNode } from '../types';
+import { resolveColor } from '../utils/color';
 import { CanvasEdge } from './CanvasEdge';
 import { CanvasNodeComponent } from './CanvasNode';
 
@@ -8,28 +9,28 @@ interface CanvasRendererProps {
   data: CanvasData;
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  iframeSandbox?: string;
 }
 
-function resolveColor(color: string | undefined): string {
-  if (!color) return 'var(--canvas-edge-color)';
-  if (color.startsWith('#') || color.startsWith('rgb') || color.startsWith('var')) return color;
-  const presetColors: Record<string, string> = {
-    '1': 'var(--canvas-color-1)',
-    '2': 'var(--canvas-color-2)',
-    '3': 'var(--canvas-color-3)',
-    '4': 'var(--canvas-color-4)',
-    '5': 'var(--canvas-color-5)',
-    '6': 'var(--canvas-color-6)',
-  };
-  return presetColors[color] || color;
+interface NodeOverride {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
 }
 
-export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRendererProps) {
+export function CanvasRenderer({
+  data,
+  fileRoutePrefix,
+  linkPreview,
+  iframeSandbox,
+}: CanvasRendererProps) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [copied, setCopied] = useState(false);
+  const [nodeOverrides, setNodeOverrides] = useState<Map<string, NodeOverride>>(new Map());
 
   const {
     setViewport,
@@ -43,13 +44,46 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
     resetZoom,
   } = usePanZoom();
 
-  const nodeMap = useMemo(() => {
-    const map = new Map<string, CanvasData['nodes'][number]>();
-    for (const node of data.nodes) {
+  const mergedNodes = useMemo(() => {
+    if (nodeOverrides.size === 0) return data.nodes;
+    return data.nodes.map((node) => {
+      const override = nodeOverrides.get(node.id);
+      if (!override) return node;
+      return {
+        ...node,
+        x: override.x ?? node.x,
+        y: override.y ?? node.y,
+        width: override.width ?? node.width,
+        height: override.height ?? node.height,
+      } as CanvasNode;
+    });
+  }, [data.nodes, nodeOverrides]);
+
+  const mergedNodeMap = useMemo(() => {
+    const map = new Map<string, CanvasNode>();
+    for (const node of mergedNodes) {
       map.set(node.id, node);
     }
     return map;
-  }, [data.nodes]);
+  }, [mergedNodes]);
+
+  const handleNodeDrag = useCallback((nodeId: string, x: number, y: number) => {
+    setNodeOverrides((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(nodeId) ?? {};
+      next.set(nodeId, { ...existing, x, y });
+      return next;
+    });
+  }, []);
+
+  const handleNodeResize = useCallback((nodeId: string, width: number, height: number) => {
+    setNodeOverrides((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(nodeId) ?? {};
+      next.set(nodeId, { ...existing, width, height });
+      return next;
+    });
+  }, []);
 
   const connectedEdgeIds = useMemo(() => {
     const activeNodeId = hoveredNodeId || selectedNodeId;
@@ -67,23 +101,76 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
     setHoveredNodeId(nodeId);
   }, []);
 
+  const handleNodeKeyDown = useCallback(
+    (e: React.KeyboardEvent, currentNodeId: string) => {
+      const currentNode = mergedNodeMap.get(currentNodeId);
+      if (!currentNode) return;
+
+      const direction = e.key;
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(direction)) return;
+
+      let targetNode: CanvasNode | null = null;
+      let minDistance = Infinity;
+
+      for (const node of mergedNodes) {
+        if (node.id === currentNodeId) continue;
+
+        const currentCenterX = currentNode.x + currentNode.width / 2;
+        const currentCenterY = currentNode.y + currentNode.height / 2;
+        const nodeCenterX = node.x + node.width / 2;
+        const nodeCenterY = node.y + node.height / 2;
+
+        let isValidDirection = false;
+        if (direction === 'ArrowUp' && nodeCenterY < currentCenterY) isValidDirection = true;
+        if (direction === 'ArrowDown' && nodeCenterY > currentCenterY) isValidDirection = true;
+        if (direction === 'ArrowLeft' && nodeCenterX < currentCenterX) isValidDirection = true;
+        if (direction === 'ArrowRight' && nodeCenterX > currentCenterX) isValidDirection = true;
+
+        if (isValidDirection) {
+          const dx = Math.abs(nodeCenterX - currentCenterX);
+          const dy = Math.abs(nodeCenterY - currentCenterY);
+
+          const directionalDistance =
+            direction === 'ArrowUp' || direction === 'ArrowDown' ? dy + dx * 2 : dx + dy * 2;
+
+          if (directionalDistance < minDistance) {
+            minDistance = directionalDistance;
+            targetNode = node;
+          }
+        }
+      }
+
+      if (targetNode) {
+        e.preventDefault();
+        const targetElement = document.querySelector(
+          `[data-node-id="${targetNode.id}"]`,
+        ) as HTMLElement;
+        if (targetElement) {
+          targetElement.focus();
+          setSelectedNodeId(targetNode.id);
+        }
+      }
+    },
+    [mergedNodes, mergedNodeMap],
+  );
+
   const sortedNodes = useMemo(() => {
-    const groups: CanvasData['nodes'] = [];
-    const others: CanvasData['nodes'] = [];
-    for (const node of data.nodes) {
+    const groups: CanvasNode[] = [];
+    const others: CanvasNode[] = [];
+    for (const node of mergedNodes) {
       if (node.type === 'group') groups.push(node);
       else others.push(node);
     }
     return [...groups, ...others];
-  }, [data.nodes]);
+  }, [mergedNodes]);
 
   const fitToView = useCallback(() => {
-    if (data.nodes.length === 0) return;
+    if (mergedNodes.length === 0) return;
     let minX = Infinity,
       minY = Infinity,
       maxX = -Infinity,
       maxY = -Infinity;
-    for (const node of data.nodes) {
+    for (const node of mergedNodes) {
       minX = Math.min(minX, node.x);
       minY = Math.min(minY, node.y);
       maxX = Math.max(maxX, node.x + node.width);
@@ -113,7 +200,7 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
     const y = viewportHeight / 2 - centerY * bestZoom;
 
     setViewport({ x, y, zoom: bestZoom });
-  }, [data.nodes, setViewport]);
+  }, [mergedNodes, setViewport]);
 
   // Recenter on load
   useEffect(() => {
@@ -228,7 +315,7 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
               <CanvasEdge
                 key={edge.id}
                 edge={edge}
-                nodeMap={nodeMap}
+                nodeMap={mergedNodeMap}
                 isHighlighted={connectedEdgeIds.has(edge.id)}
               />
             ))}
@@ -241,8 +328,12 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
               isSelected={node.id === selectedNodeId}
               fileRoutePrefix={fileRoutePrefix}
               linkPreview={linkPreview}
+              iframeSandbox={iframeSandbox}
               onHover={handleNodeHover}
               onClick={(nodeId) => setSelectedNodeId(nodeId)}
+              onKeyDown={handleNodeKeyDown}
+              onNodeDrag={handleNodeDrag}
+              onNodeResize={handleNodeResize}
             />
           ))}
         </div>
@@ -460,19 +551,33 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
               <span className="canvas-help-desc">Click note. Tap background to clear</span>
             </div>
             <div className="canvas-help-row">
-              <span className="canvas-help-key"><kbd>Ctrl+0</kbd> / <kbd>⌘0</kbd></span>
+              <span className="canvas-help-key">
+                <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd>
+              </span>
+              <span className="canvas-help-desc">Navigate between focused cards</span>
+            </div>
+            <div className="canvas-help-row">
+              <span className="canvas-help-key">
+                <kbd>Ctrl+0</kbd> / <kbd>⌘0</kbd>
+              </span>
               <span className="canvas-help-desc">Reset scale (1:1)</span>
             </div>
             <div className="canvas-help-row">
-              <span className="canvas-help-key"><kbd>Ctrl+=</kbd> / <kbd>⌘=</kbd></span>
+              <span className="canvas-help-key">
+                <kbd>Ctrl+=</kbd> / <kbd>⌘=</kbd>
+              </span>
               <span className="canvas-help-desc">Zoom in</span>
             </div>
             <div className="canvas-help-row">
-              <span className="canvas-help-key"><kbd>Ctrl+-</kbd> / <kbd>⌘-</kbd></span>
+              <span className="canvas-help-key">
+                <kbd>Ctrl+-</kbd> / <kbd>⌘-</kbd>
+              </span>
               <span className="canvas-help-desc">Zoom out</span>
             </div>
             <div className="canvas-help-row">
-              <span className="canvas-help-key"><kbd>Esc</kbd></span>
+              <span className="canvas-help-key">
+                <kbd>Esc</kbd>
+              </span>
               <span className="canvas-help-desc">Deselect card</span>
             </div>
           </div>

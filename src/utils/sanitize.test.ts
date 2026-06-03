@@ -38,7 +38,8 @@ test('sanitizes data: href', () => {
 });
 
 test('preserves safe HTML', () => {
-  const html = '<h1>Title</h1><p>Text with <strong>bold</strong> and <a href="https://example.com">link</a></p>';
+  const html =
+    '<h1>Title</h1><p>Text with <strong>bold</strong> and <a href="https://example.com">link</a></p>';
   const cleaned = sanitizeHtml(html);
   expect(cleaned).toContain('<h1>Title</h1>');
   expect(cleaned).toContain('<strong>bold</strong>');

@@ -74,4 +74,9 @@ export interface CanvasPluginOptions {
   exclude?: string[];
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  /**
+   * Sandbox attributes for iframes used in link previews and PDF rendering.
+   * @default "allow-scripts allow-same-origin allow-popups"
+   */
+  iframeSandbox?: string;
 }

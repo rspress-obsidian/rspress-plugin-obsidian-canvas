@@ -6,12 +6,14 @@ interface CanvasViewerProps {
   canvasJson: string;
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  iframeSandbox?: string;
 }
 
 export default function CanvasViewer({
   canvasJson,
   fileRoutePrefix,
   linkPreview,
+  iframeSandbox,
 }: CanvasViewerProps) {
   const data = useMemo(() => {
     try {
@@ -26,5 +28,12 @@ export default function CanvasViewer({
     return <div className="canvas-error">Failed to load canvas. Check console for details.</div>;
   }
 
-  return <CanvasRenderer data={data} fileRoutePrefix={fileRoutePrefix} linkPreview={linkPreview} />;
+  return (
+    <CanvasRenderer
+      data={data}
+      fileRoutePrefix={fileRoutePrefix}
+      linkPreview={linkPreview}
+      iframeSandbox={iframeSandbox}
+    />
+  );
 }

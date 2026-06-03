@@ -62,8 +62,23 @@ function validateNode(node: unknown): CanvasNode {
       const fileContent = assertOptionalString(n.fileContent, 'node.fileContent');
       const imageUrl = assertOptionalString(n.imageUrl, 'node.imageUrl');
       const isImage = n.isImage !== undefined ? Boolean(n.isImage) : undefined;
+      const isVideo = n.isVideo !== undefined ? Boolean(n.isVideo) : undefined;
+      const isAudio = n.isAudio !== undefined ? Boolean(n.isAudio) : undefined;
+      const isPdf = n.isPdf !== undefined ? Boolean(n.isPdf) : undefined;
       const isError = n.isError !== undefined ? Boolean(n.isError) : undefined;
-      return { ...base, type: 'file', file, subpath, fileContent, imageUrl, isImage, isError };
+      return {
+        ...base,
+        type: 'file',
+        file,
+        subpath,
+        fileContent,
+        imageUrl,
+        isImage,
+        isVideo,
+        isAudio,
+        isPdf,
+        isError,
+      };
     }
     case 'link': {
       const url = assertString(n.url, 'node.url');

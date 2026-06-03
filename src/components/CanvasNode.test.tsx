@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { render } from '@testing-library/react';
-import { CanvasNodeComponent } from './CanvasNode';
 import type { CanvasNode } from '../types';
+import { CanvasNodeComponent } from './CanvasNode';
 
 test('renders text node with markdown', () => {
   const node: CanvasNode = {

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { render, fireEvent } from '@testing-library/react';
-import { CanvasRenderer } from './CanvasRenderer';
+import { fireEvent, render } from '@testing-library/react';
 import type { CanvasData } from '../types';
+import { CanvasRenderer } from './CanvasRenderer';
 
 const sampleData: CanvasData = {
   nodes: [
