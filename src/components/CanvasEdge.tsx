@@ -1,4 +1,6 @@
+import { memo } from 'react';
 import type { CanvasEdgeData, CanvasNode } from '../types';
+import { resolveColor } from '../utils/color';
 
 interface Point {
   x: number;
@@ -71,27 +73,25 @@ function getControlPoints(
   return [cp1, cp2];
 }
 
-function resolveColor(color: string | undefined): string {
-  if (!color) return 'var(--canvas-edge-color)';
-  if (color.startsWith('#') || color.startsWith('rgb') || color.startsWith('var')) return color;
-  const presetColors: Record<string, string> = {
-    '1': 'var(--canvas-color-1)',
-    '2': 'var(--canvas-color-2)',
-    '3': 'var(--canvas-color-3)',
-    '4': 'var(--canvas-color-4)',
-    '5': 'var(--canvas-color-5)',
-    '6': 'var(--canvas-color-6)',
-  };
-  return presetColors[color] || color;
+function edgeColor(color: string | undefined): string {
+  return resolveColor(color, 'var(--canvas-edge-color)');
 }
 
 interface CanvasEdgeProps {
   edge: CanvasEdgeData;
   nodeMap: Map<string, CanvasNode>;
   isHighlighted?: boolean;
+  isSelected?: boolean;
+  onSelect?: (edgeId: string) => void;
 }
 
-export function CanvasEdge({ edge, nodeMap, isHighlighted }: CanvasEdgeProps) {
+export const CanvasEdge = memo(function CanvasEdge({
+  edge,
+  nodeMap,
+  isHighlighted,
+  isSelected,
+  onSelect,
+}: CanvasEdgeProps) {
   const fromNode = nodeMap.get(edge.fromNode);
   const toNode = nodeMap.get(edge.toNode);
 
@@ -101,7 +101,7 @@ export function CanvasEdge({ edge, nodeMap, isHighlighted }: CanvasEdgeProps) {
   const end = getEdgePoint(toNode, edge.toSide);
   const [cp1, cp2] = getControlPoints(start, end, edge.fromSide, edge.toSide);
 
-  const color = resolveColor(edge.color);
+  const color = edgeColor(edge.color);
   const hasArrow = edge.toEnd !== 'none';
   const hasStartArrow = edge.fromEnd === 'arrow';
   const strokeWidth = isHighlighted ? 3 : 2;
@@ -110,12 +110,22 @@ export function CanvasEdge({ edge, nodeMap, isHighlighted }: CanvasEdgeProps) {
   const pathD = `M ${start.x} ${start.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${end.x} ${end.y}`;
 
   return (
-    <g className={isHighlighted ? 'canvas-edge-highlighted' : 'canvas-edge'}>
+    // biome-ignore lint/a11y/noStaticElementInteractions: edges are selectable in editor mode; role=button conveys interactivity
+    <g
+      className={isHighlighted ? 'canvas-edge-highlighted' : 'canvas-edge'}
+      role={onSelect ? 'button' : undefined}
+      onClick={(event) => {
+        if (onSelect) {
+          event.stopPropagation();
+          onSelect(edge.id);
+        }
+      }}
+      style={{ cursor: onSelect ? 'pointer' : undefined }}>
       <path
         d={pathD}
         stroke={color}
-        strokeWidth={strokeWidth}
-        strokeOpacity={strokeOpacity}
+        strokeWidth={isSelected ? 4 : strokeWidth}
+        strokeOpacity={isSelected ? 1 : strokeOpacity}
         fill="none"
         markerEnd={hasArrow ? `url(#arrowhead-${edge.id})` : undefined}
         markerStart={hasStartArrow ? `url(#arrowhead-start-${edge.id})` : undefined}
@@ -134,4 +144,4 @@ export function CanvasEdge({ edge, nodeMap, isHighlighted }: CanvasEdgeProps) {
       )}
     </g>
   );
-}
+});

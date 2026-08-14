@@ -65,12 +65,12 @@ test('renders images', () => {
 
 test('renders wiki-links without display text', () => {
   const html = renderMarkdown('[[My Note]]');
-  expect(html).toContain('<a href="/My Note" class="wiki-link">My Note</a>');
+  expect(html).toContain('<a href="/my-note" class="wiki-link">My Note</a>');
 });
 
 test('renders wiki-links with display text', () => {
   const html = renderMarkdown('[[My Note|Click Here]]');
-  expect(html).toContain('<a href="/My Note" class="wiki-link">Click Here</a>');
+  expect(html).toContain('<a href="/my-note" class="wiki-link">Click Here</a>');
 });
 
 test('renders horizontal rules', () => {
@@ -178,4 +178,107 @@ test('renders tables', () => {
   expect(html).toContain('<table>');
   expect(html).toContain('<th>A</th>');
   expect(html).toContain('<td>1</td>');
+});
+test('resolves wiki-link aliases, headings, and prefixes', () => {
+  const html = renderMarkdown('[[Notes/Plan#Next Steps|Read plan]]', {
+    fileRoutePrefix: '/docs',
+  });
+  expect(html).toContain('<a href="/docs/notes/plan#next-steps" class="wiki-link">Read plan</a>');
+});
+
+test('renders Obsidian media embeds from the asset map', () => {
+  const html = renderMarkdown('![[Assets/clip.png]]', {
+    assets: { 'assets/clip.png': 'data:image/png;base64,AAAA' },
+  });
+  expect(html).toContain(
+    '<img src="data:image/png;base64,AAAA" alt="Assets/clip.png" class="obsidian-embed-image">',
+  );
+});
+
+test('renders embed size syntax', () => {
+  const html = renderMarkdown('![[Assets/clip.png|300]]', {
+    assets: { 'assets/clip.png': 'data:image/png;base64,AAAA' },
+  });
+  expect(html).toContain('style="width:300px;"');
+  expect(html).toContain('class="obsidian-embed-image"');
+
+  const sized = renderMarkdown('![[Assets/clip.png|300x200]]', {
+    assets: { 'assets/clip.png': 'data:image/png;base64,AAAA' },
+  });
+  expect(sized).toContain('style="width:300px;height:200px;"');
+});
+
+test('preserves alias text on embeds', () => {
+  const html = renderMarkdown('![[Assets/clip.png|My image]]', {
+    assets: { 'assets/clip.png': 'data:image/png;base64,AAAA' },
+  });
+  expect(html).toContain('alt="My image"');
+  expect(html).not.toContain('style="width');
+});
+
+test('rejects unsafe HTML and URL protocols', () => {
+  const html = renderMarkdown('# <img src=x onerror=alert(1)>\\n\\n[x](javascript:alert(1))');
+  expect(html).not.toContain('<img src=x onerror=alert(1)>');
+  expect(html).not.toContain('javascript:');
+  expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+});
+test('embeds a referenced Markdown note with a recursion limit', () => {
+  const html = renderMarkdown('![[Welcome]]', {
+    notes: { 'welcome.md': '# Welcome\n\n[[Welcome]]' },
+    fileRoutePrefix: '/docs',
+  });
+  expect(html).toContain('<h1>Welcome</h1>');
+  expect(html).toContain('class="obsidian-embed-note"');
+  expect(html).toContain('/docs/welcome');
+});
+
+test('renders Obsidian callouts', () => {
+  const html = renderMarkdown('> [!note] A note\n> Body text');
+  expect(html).toContain('canvas-callout canvas-callout-note');
+  expect(html).toContain('canvas-callout-title');
+  expect(html).toContain('A note');
+  expect(html).toContain('Body text');
+});
+
+test('keeps plain blockquotes as blockquotes', () => {
+  const html = renderMarkdown('> just a quote');
+  expect(html).toContain('<blockquote>');
+  expect(html).not.toContain('canvas-callout');
+});
+
+test('renders inline tags', () => {
+  const html = renderMarkdown('see #hello/world and #plain');
+  expect(html).toContain('<span class="canvas-tag">#hello/world</span>');
+  expect(html).toContain('<span class="canvas-tag">#plain</span>');
+});
+
+test('does not tagify code spans or code fences', () => {
+  const inline = renderMarkdown('use `#notatag` here');
+  expect(inline).toContain('<code>#notatag</code>');
+  expect(inline).not.toContain('canvas-tag');
+
+  const fence = renderMarkdown('```js\nconst x = "#nope";\n```');
+  expect(fence).not.toContain('canvas-tag');
+});
+
+test('renders inline and display math', () => {
+  const inline = renderMarkdown('energy $E = mc^2$ here');
+  expect(inline).toContain('canvas-math');
+  expect(inline).toContain('katex');
+
+  const display = renderMarkdown('$$\nE = mc^2\n$$');
+  expect(display).toContain('canvas-math-display');
+});
+
+test('renders footnotes', () => {
+  const html = renderMarkdown('Text with a note[^1].\n\n[^1]: The note body.');
+  expect(html).toContain('canvas-footnote-ref');
+  expect(html).toContain('canvas-footnotes');
+  expect(html).toContain('The note body.');
+});
+
+test('emits mermaid placeholder for mermaid fences', () => {
+  const html = renderMarkdown('```mermaid\ngraph TD\nA-->B\n```');
+  expect(html).toContain('canvas-mermaid-block');
+  expect(html).toContain('data-code=');
 });

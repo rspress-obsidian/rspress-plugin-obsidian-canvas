@@ -14,9 +14,11 @@ Customize how the plugin discovers canvas files and generates routes.
 | `vaultRoot` | `string` | `process.cwd()` | Root directory to scan for `.canvas` files |
 | `routePrefix` | `string` | `/canvas` | URL prefix for generated canvas pages |
 | `include` | `string[]` | `['**/*.canvas']` | Glob patterns for finding canvas files |
-| `exclude` | `string[]` | `[]` | Glob patterns to exclude from scanning |
-| `fileRoutePrefix` | `string` | `undefined` | Prefix for file node links to Rspress routes |
+| `exclude` | `string[]` | `[]` | Glob patterns to ignore when scanning |
+| `fileRoutePrefix` | `string` | — | URL prefix prepended to resolved Markdown file routes (e.g. `/docs`) |
 | `linkPreview` | `boolean` | `false` | Render link nodes as embedded iframes |
+| `editable` | `boolean` | `false` | Enable browser-side editing controls |
+| `editorTitle` | `string` | `Canvas editor` | Editor banner and export filename |
 
 ## vaultRoot
 
@@ -84,3 +86,28 @@ pluginObsidianCanvas({
 ```
 
 When enabled, link nodes render an embedded iframe of the target URL instead of just displaying the URL text. The iframe uses `sandbox="allow-scripts allow-same-origin allow-popups"` for security.
+
+## Editor mode
+
+Enable the read/write-in-browser editor UI:
+
+```ts
+pluginObsidianCanvas({
+  editable: true,
+  editorTitle: 'Architecture canvas',
+})
+```
+
+Editor mode supports:
+
+- Creating text, file, link, and group cards.
+- Selecting multiple cards with Shift-click.
+- Dragging and resizing cards.
+- Connecting cards with edges (select a card, then the connect button, then a target card).
+- Selecting edges by clicking them, and deleting selected edges.
+- Deleting selected cards and connected edges.
+- Undo and redo.
+- Keyboard shortcuts.
+- Exporting updated JSON Canvas with the download button or `Ctrl/Cmd+S`.
+
+Rspress builds are static. Editor changes remain in browser memory and must be exported, then copied back into the vault before the next build.

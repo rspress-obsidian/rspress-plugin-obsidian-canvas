@@ -1,18 +1,20 @@
 # rspress-plugin-obsidian-canvas
 
-Render Obsidian vault `.canvas` files as beautiful, interactive pages in your Rspress site.
+Render Obsidian vault `.canvas` files as beautiful, interactive, read-only pages in your Rspress site.
 
 ## What it does
 
 This Rspress plugin discovers `.canvas` files in your Obsidian vault and generates an interactive page for each one. The canvas renderer supports:
 
-- **Pan and zoom** via mouse drag and scroll
-- **Bezier curve edges** that route naturally between node sides
-- **Edge highlighting** when hovering nodes
-- **Markdown rendering** in text nodes (headers, bold, italic, lists, code, blockquotes, links)
+- **Pan and zoom** via mouse drag, scroll, and keyboard shortcuts
+- **Spec-ordered nodes** and Bezier curve edges
+- **Edge highlighting** when hovering or selecting nodes
+- **Sanitized Markdown rendering** with safe links and Obsidian wiki-links
+- **File cards** for Markdown notes, images, audio, video, and PDFs
+- **Obsidian embeds** for vault media referenced by `![[...]]`
 - **Clickable file nodes** that link to the corresponding Rspress page
 - **Group nodes** rendered behind their contents with visual containment
-- **Link nodes** with optional iframe preview
+- **Link nodes** with optional sandboxed iframe preview
 
 ## Install
 
@@ -67,8 +69,10 @@ Each `.canvas` file becomes a page at `/canvas/<filename>`.
 | `vaultRoot` | `string` | `process.cwd()` | Root directory to scan for `.canvas` files |
 | `routePrefix` | `string` | `/canvas` | URL prefix for canvas pages |
 | `include` | `string[]` | `['**/*.canvas']` | Glob patterns for finding canvas files |
-| `exclude` | `string[]` | `[]` | Glob patterns to exclude |
-| `fileRoutePrefix` | `string` | `undefined` | Prefix for file node links (e.g. `/docs`) |
+| `exclude` | `string[]` | `[]` | Glob patterns to ignore when scanning |
+| `fileRoutePrefix` | `string` | — | URL prefix prepended to resolved Markdown file routes (e.g. `/docs`) |
+| `editable` | `boolean` | `false` | Enable the browser Canvas editor UI |
+| `editorTitle` | `string` | `Canvas editor` | Title used by the editor banner and exported file |
 | `linkPreview` | `boolean` | `false` | Render link nodes as embedded iframes |
 
 ## Features
@@ -106,6 +110,19 @@ A file node with `file: "Welcome.md"` will link to `/docs/welcome`.
 
 Subpaths are appended directly: `file: "Notes.md", subpath: "#section"` becomes `/docs/notes#section`.
 
+### Markdown Extensions
+
+Text and file nodes support Obsidian-specific Markdown syntax beyond the standard set:
+
+| Syntax | Example | Renders as |
+|--------|---------|------------|
+| Callouts | `> [!note] Title` | Styled callout block (`note`, `tip`, `warning`, `danger`, `info`, `question`, and more) |
+| Math | `$E = mc^2$` or `$$\int x\,dx$$` | KaTeX-rendered inline/display math |
+| Mermaid | ` ```mermaid ` ... ` ``` ` | Client-side rendered diagram |
+| Tags | `#tag`, `#nested/tag` | Tag chip |
+| Footnotes | `note[^1]` + `[^1]: body` | Footnote reference with backlink |
+| Embeds | `![[image.png]]`, `![[Note]]` | Inline media or transcluded note |
+
 ## Styling
 
 Import the provided CSS or override these classes:
@@ -128,9 +145,11 @@ Import the provided CSS or override these classes:
 4. Nodes are positioned absolutely on a pannable/zoomable viewport
 5. Edges are rendered as SVG bezier curves between node connection points
 
-## Canvas Format
+The plugin is a static viewer by default. Set `editable: true` to enable browser-side editing controls. The editor supports text-card creation and editing, multi-selection, node movement, resizing, deletion, undo/redo, keyboard shortcuts, and `.canvas` JSON export. It does not write directly to the vault because Rspress pages are static builds.
 
-Implements [JSON Canvas 1.0](https://jsoncanvas.org/spec/1.0/), the open standard created for Obsidian.
+Editor changes exist in browser memory until exported with the download control or `Ctrl/Cmd+S`. Rebuild the site and replace the source `.canvas` file to publish changes.
+
+Custom Obsidian plugins that add Canvas node types or custom Markdown syntax remain outside the supported format.
 
 ## Development
 

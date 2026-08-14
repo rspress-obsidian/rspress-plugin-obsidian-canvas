@@ -1,6 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { KeyboardEvent, MouseEvent, PointerEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePanZoom } from '../hooks/usePanZoom';
-import type { CanvasData } from '../types';
+import type { CanvasData, CanvasEdgeData, CanvasNode } from '../types';
+import { resolveColor } from '../utils/color';
+import {
+  createEdge,
+  createFileNode,
+  createGroupNode,
+  createLinkNode,
+  createTextNode,
+} from '../utils/editor';
+import { disposeMermaid, renderMermaidBlocks } from '../utils/mermaid';
 import { CanvasEdge } from './CanvasEdge';
 import { CanvasNodeComponent } from './CanvasNode';
 
@@ -8,27 +18,65 @@ interface CanvasRendererProps {
   data: CanvasData;
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  editable?: boolean;
+  editorTitle?: string;
+}
+type EditorAction =
+  | { type: 'move'; id: string; from: { x: number; y: number }; to: { x: number; y: number } }
+  | {
+      type: 'resize';
+      id: string;
+      from: { width: number; height: number };
+      to: { width: number; height: number };
+    }
+  | { type: 'update'; id: string; from: CanvasNode; to: CanvasNode }
+  | { type: 'add-node'; node: CanvasNode }
+  | { type: 'delete-node'; node: CanvasNode; edges: CanvasEdgeData[] }
+  | { type: 'delete-nodes'; nodes: CanvasNode[]; edges: CanvasEdgeData[] }
+  | { type: 'delete-edge'; edge: CanvasEdgeData };
+
+interface DragState {
+  id: string;
+  startX: number;
+  startY: number;
+  originX: number;
+  originY: number;
 }
 
-function resolveColor(color: string | undefined): string {
-  if (!color) return 'var(--canvas-edge-color)';
-  if (color.startsWith('#') || color.startsWith('rgb') || color.startsWith('var')) return color;
-  const presetColors: Record<string, string> = {
-    '1': 'var(--canvas-color-1)',
-    '2': 'var(--canvas-color-2)',
-    '3': 'var(--canvas-color-3)',
-    '4': 'var(--canvas-color-4)',
-    '5': 'var(--canvas-color-5)',
-    '6': 'var(--canvas-color-6)',
+function edgeColor(color: string | undefined): string {
+  return resolveColor(color, 'var(--canvas-edge-color)');
+}
+
+function cloneData(data: CanvasData): CanvasData {
+  return {
+    nodes: data.nodes.map((node) => ({ ...node })),
+    edges: data.edges.map((edge) => ({ ...edge })),
+    assets: data.assets ? { ...data.assets } : undefined,
+    notes: data.notes ? { ...data.notes } : undefined,
   };
-  return presetColors[color] || color;
 }
 
-export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRendererProps) {
+export function CanvasRenderer({
+  data,
+  fileRoutePrefix,
+  linkPreview,
+  editable = false,
+  editorTitle = 'Canvas editor',
+}: CanvasRendererProps) {
+  const [canvas, setCanvas] = useState(() => cloneData(data));
+  const [history, setHistory] = useState<EditorAction[]>([]);
+  const [future, setFuture] = useState<EditorAction[]>([]);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [showGrid, setShowGrid] = useState<boolean>(true);
-  const [showHelp, setShowHelp] = useState<boolean>(false);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [showGrid, setShowGrid] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [draftText, setDraftText] = useState('');
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [edgeSourceId, setEdgeSourceId] = useState<string | null>(null);
+  const dragRef = useRef<DragState | null>(null);
+  const resizeRef = useRef<DragState | null>(null);
+  const mermaidRootRef = useRef<HTMLDivElement>(null);
 
   const {
     viewport,
@@ -43,132 +91,412 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
     resetZoom,
   } = usePanZoom();
 
-  const nodeMap = useMemo(() => {
-    const map = new Map<string, CanvasData['nodes'][number]>();
-    for (const node of data.nodes) {
-      map.set(node.id, node);
-    }
-    return map;
-  }, [data.nodes]);
-
+  const nodeMap = useMemo(
+    () => new Map(canvas.nodes.map((node) => [node.id, node])),
+    [canvas.nodes],
+  );
   const connectedEdgeIds = useMemo(() => {
-    const activeNodeId = hoveredNodeId || selectedNodeId;
-    if (!activeNodeId) return new Set<string>();
-    const ids = new Set<string>();
-    for (const edge of data.edges) {
-      if (edge.fromNode === activeNodeId || edge.toNode === activeNodeId) {
-        ids.add(edge.id);
-      }
-    }
-    return ids;
-  }, [hoveredNodeId, selectedNodeId, data.edges]);
+    const activeIds = new Set(selectedNodeIds);
+    if (hoveredNodeId) activeIds.add(hoveredNodeId);
+    return new Set(
+      canvas.edges
+        .filter((edge) => activeIds.has(edge.fromNode) || activeIds.has(edge.toNode))
+        .map((edge) => edge.id),
+    );
+  }, [canvas.edges, hoveredNodeId, selectedNodeIds]);
 
-  const handleNodeHover = useCallback((nodeId: string | null) => {
-    setHoveredNodeId(nodeId);
+  const commit = useCallback((action: EditorAction, next: CanvasData) => {
+    setCanvas(next);
+    setHistory((previous) => [...previous, action]);
+    setFuture([]);
   }, []);
 
-  const sortedNodes = useMemo(
-    () =>
-      [...data.nodes].sort((a, b) => {
-        if (a.type === 'group' && b.type !== 'group') return -1;
-        if (b.type === 'group' && a.type !== 'group') return 1;
-        return 0;
-      }),
-    [data.nodes],
+  const applyAction = useCallback(
+    (source: CanvasData, action: EditorAction, reverse = false): CanvasData => {
+      const next = cloneData(source);
+      if (action.type === 'move') {
+        const node = next.nodes.find((item) => item.id === action.id);
+        if (node) Object.assign(node, reverse ? action.from : action.to);
+      } else if (action.type === 'resize') {
+        const node = next.nodes.find((item) => item.id === action.id);
+        if (node) Object.assign(node, reverse ? action.from : action.to);
+      } else if (action.type === 'update') {
+        const index = next.nodes.findIndex((item) => item.id === action.id);
+        if (index !== -1) next.nodes[index] = reverse ? { ...action.from } : { ...action.to };
+      } else if (action.type === 'add-node') {
+        if (reverse) next.nodes = next.nodes.filter((node) => node.id !== action.node.id);
+        else next.nodes.push({ ...action.node });
+      } else if (action.type === 'delete-node') {
+        if (reverse) {
+          next.nodes.push({ ...action.node });
+          next.edges.push(...action.edges.map((edge) => ({ ...edge })));
+        } else {
+          next.nodes = next.nodes.filter((node) => node.id !== action.node.id);
+          next.edges = next.edges.filter(
+            (edge) => edge.fromNode !== action.node.id && edge.toNode !== action.node.id,
+          );
+        }
+      } else if (action.type === 'delete-nodes') {
+        const ids = new Set(action.nodes.map((node) => node.id));
+        if (reverse) {
+          next.nodes.push(...action.nodes.map((node) => ({ ...node })));
+          next.edges.push(...action.edges.map((edge) => ({ ...edge })));
+        } else {
+          next.nodes = next.nodes.filter((node) => !ids.has(node.id));
+          next.edges = next.edges.filter(
+            (edge) => !ids.has(edge.fromNode) && !ids.has(edge.toNode),
+          );
+        }
+      } else if (action.type === 'add-edge') {
+        if (reverse) next.edges = next.edges.filter((edge) => edge.id !== action.edge.id);
+        else next.edges.push({ ...action.edge });
+      } else if (action.type === 'delete-edge') {
+        if (reverse) next.edges.push({ ...action.edge });
+        else next.edges = next.edges.filter((edge) => edge.id !== action.edge.id);
+      }
+      return next;
+    },
+    [],
   );
 
+  const undo = useCallback(() => {
+    const action = history.at(-1);
+    if (!action) return;
+    setCanvas((current) => applyAction(current, action, true));
+    setHistory((current) => current.slice(0, -1));
+    setFuture((current) => [...current, action]);
+  }, [applyAction, history]);
+
+  const redo = useCallback(() => {
+    const action = future.at(-1);
+    if (!action) return;
+    setCanvas((current) => applyAction(current, action));
+    setFuture((current) => current.slice(0, -1));
+    setHistory((current) => [...current, action]);
+  }, [applyAction, future]);
+
   const fitToView = useCallback(() => {
-    if (data.nodes.length === 0) return;
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-    for (const node of data.nodes) {
-      minX = Math.min(minX, node.x);
-      minY = Math.min(minY, node.y);
-      maxX = Math.max(maxX, node.x + node.width);
-      maxY = Math.max(maxY, node.y + node.height);
-    }
+    if (canvas.nodes.length === 0) return;
+    const bounds = canvas.nodes.reduce(
+      (result, node) => ({
+        minX: Math.min(result.minX, node.x),
+        minY: Math.min(result.minY, node.y),
+        maxX: Math.max(result.maxX, node.x + node.width),
+        maxY: Math.max(result.maxY, node.y + node.height),
+      }),
+      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+    );
+    const viewport = document.querySelector('.canvas-viewport')?.getBoundingClientRect();
+    const width = viewport?.width || 800;
+    const height = viewport?.height || 500;
+    const zoom = Math.max(
+      0.15,
+      Math.min(
+        1.5,
+        Math.min(
+          (width - 80) / (bounds.maxX - bounds.minX),
+          (height - 80) / (bounds.maxY - bounds.minY),
+        ),
+      ),
+    );
+    setViewport({
+      x: width / 2 - (bounds.minX + (bounds.maxX - bounds.minX) / 2) * zoom,
+      y: height / 2 - (bounds.minY + (bounds.maxY - bounds.minY) / 2) * zoom,
+      zoom,
+    });
+  }, [canvas.nodes, setViewport]);
 
-    const boundingWidth = maxX - minX;
-    const boundingHeight = maxY - minY;
-    const centerX = minX + boundingWidth / 2;
-    const centerY = minY + boundingHeight / 2;
-
-    let viewportWidth = 800;
-    let viewportHeight = 500;
-    const viewportEl = document.querySelector('.canvas-viewport');
-    if (viewportEl) {
-      const rect = viewportEl.getBoundingClientRect();
-      viewportWidth = rect.width || 800;
-      viewportHeight = rect.height || 500;
-    }
-
-    const padding = 80;
-    const zoomX = (viewportWidth - padding) / boundingWidth;
-    const zoomY = (viewportHeight - padding) / boundingHeight;
-    const bestZoom = Math.max(0.15, Math.min(1.5, Math.min(zoomX, zoomY)));
-
-    const x = viewportWidth / 2 - centerX * bestZoom;
-    const y = viewportHeight / 2 - centerY * bestZoom;
-
-    setViewport({ x, y, zoom: bestZoom });
-  }, [data.nodes, setViewport]);
-
-  // Recenter on load
   useEffect(() => {
-    const timer = setTimeout(() => {
-      requestAnimationFrame(() => {
-        fitToView();
-      });
-    }, 100);
+    const timer = setTimeout(() => requestAnimationFrame(fitToView), 100);
     return () => clearTimeout(timer);
   }, [fitToView]);
 
-  const handleViewportClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      setSelectedNodeId(null);
-    }
+  // Re-inject mermaid diagrams after every commit — internal re-renders
+  // (hover, selection, fit-to-view) re-apply dangerouslySetInnerHTML and wipe
+  // injected SVGs. renderMermaidBlocks is idempotent, so this self-heals.
+  useEffect(() => {
+    if (mermaidRootRef.current) renderMermaidBlocks(mermaidRootRef.current);
+  });
+
+  useEffect(() => disposeMermaid, []);
+
+  const selectNode = useCallback((nodeId: string, event?: MouseEvent) => {
+    setSelectedNodeIds((current) => {
+      if (event?.shiftKey)
+        return current.includes(nodeId)
+          ? current.filter((id) => id !== nodeId)
+          : [...current, nodeId];
+      return [nodeId];
+    });
   }, []);
 
-  const handleViewportDoubleClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) {
-        fitToView();
+  const startNodeDrag = useCallback(
+    (node: CanvasNode, event: PointerEvent) => {
+      if (!editable || event.button !== 0) return;
+      dragRef.current = {
+        id: node.id,
+        startX: event.clientX,
+        startY: event.clientY,
+        originX: node.x,
+        originY: node.y,
+      };
+    },
+    [editable],
+  );
+
+  const finishNodeDrag = useCallback(() => {
+    const drag = dragRef.current;
+    const resize = resizeRef.current;
+    dragRef.current = null;
+    resizeRef.current = null;
+    if (drag) {
+      const node = canvas.nodes.find((item) => item.id === drag.id);
+      if (node && (node.x !== drag.originX || node.y !== drag.originY)) {
+        commit(
+          {
+            type: 'move',
+            id: drag.id,
+            from: { x: drag.originX, y: drag.originY },
+            to: { x: node.x, y: node.y },
+          },
+          canvas,
+        );
+      }
+    }
+    if (resize) {
+      const node = canvas.nodes.find((item) => item.id === resize.id);
+      if (node && (node.width !== resize.originX || node.height !== resize.originY)) {
+        commit(
+          {
+            type: 'resize',
+            id: resize.id,
+            from: { width: resize.originX, height: resize.originY },
+            to: { width: node.width, height: node.height },
+          },
+          canvas,
+        );
+      }
+    }
+  }, [canvas, commit]);
+  const updateDraggedNode = useCallback(
+    (event: PointerEvent) => {
+      const resize = resizeRef.current;
+      const drag = dragRef.current;
+      if (!resize && !drag) return;
+      const zoom = viewport.zoom || 1;
+      setCanvas((current) => {
+        const next = cloneData(current);
+        const node = next.nodes.find((item) => item.id === (resize || drag)?.id);
+        if (!node) return next;
+        if (resize) {
+          node.width = Math.max(
+            80,
+            Math.round(resize.originX + (event.clientX - resize.startX) / zoom),
+          );
+          node.height = Math.max(
+            60,
+            Math.round(resize.originY + (event.clientY - resize.startY) / zoom),
+          );
+        } else if (drag) {
+          node.x = Math.round(drag.originX + (event.clientX - drag.startX) / zoom);
+          node.y = Math.round(drag.originY + (event.clientY - drag.startY) / zoom);
+        }
+        return next;
+      });
+    },
+    [viewport.zoom],
+  );
+
+  const createTextCard = useCallback(() => {
+    const node = createTextNode(canvas.nodes, 0, 0);
+    commit({ type: 'add-node', node }, { ...cloneData(canvas), nodes: [...canvas.nodes, node] });
+    setSelectedNodeIds([node.id]);
+    setEditingNodeId(node.id);
+    setDraftText(node.text);
+  }, [canvas, commit]);
+
+  const createCard = useCallback(
+    (factory: (nodes: CanvasNode[], x: number, y: number) => CanvasNode) => {
+      const node = factory(canvas.nodes, 0, 0);
+      commit({ type: 'add-node', node }, { ...cloneData(canvas), nodes: [...canvas.nodes, node] });
+      setSelectedNodeIds([node.id]);
+      return node;
+    },
+    [canvas, commit],
+  );
+
+  const createFileCard = useCallback(
+    () => createCard((nodes, x, y) => createFileNode(nodes, x, y)),
+    [createCard],
+  );
+  const createLinkCard = useCallback(
+    () => createCard((nodes, x, y) => createLinkNode(nodes, x, y)),
+    [createCard],
+  );
+  const createGroupCard = useCallback(
+    () => createCard((nodes, x, y) => createGroupNode(nodes, x, y)),
+    [createCard],
+  );
+
+  const connectEdge = useCallback(
+    (fromId: string, toId: string) => {
+      if (fromId === toId) return;
+      const edge = createEdge(canvas.edges, fromId, toId);
+      commit({ type: 'add-edge', edge }, { ...cloneData(canvas), edges: [...canvas.edges, edge] });
+    },
+    [canvas, commit],
+  );
+
+  // Stable per-node click handler: connect if an edge source is armed, else select.
+  const handleNodeClick = useCallback(
+    (nodeId: string) => {
+      if (edgeSourceId && edgeSourceId !== nodeId) {
+        connectEdge(edgeSourceId, nodeId);
+        setEdgeSourceId(null);
+      } else {
+        selectNode(nodeId);
       }
     },
-    [fitToView],
+    [edgeSourceId, connectEdge, selectNode],
+  );
+
+  const deleteSelectedEdge = useCallback(() => {
+    if (!selectedEdgeId) return;
+    const edge = canvas.edges.find((item) => item.id === selectedEdgeId);
+    if (!edge) return;
+    commit(
+      { type: 'delete-edge', edge },
+      { ...cloneData(canvas), edges: canvas.edges.filter((item) => item.id !== edge.id) },
+    );
+    setSelectedEdgeId(null);
+  }, [canvas, commit, selectedEdgeId]);
+
+  const deleteSelected = useCallback(() => {
+    const nodes = selectedNodeIds
+      .map((id) => canvas.nodes.find((item) => item.id === id))
+      .filter((node): node is CanvasNode => node !== undefined);
+    if (nodes.length === 0) return;
+    const ids = new Set(nodes.map((node) => node.id));
+    const edges = canvas.edges.filter((edge) => ids.has(edge.fromNode) || ids.has(edge.toNode));
+    commit(
+      { type: 'delete-nodes', nodes, edges },
+      {
+        ...cloneData(canvas),
+        nodes: canvas.nodes.filter((node) => !ids.has(node.id)),
+        edges: canvas.edges.filter((edge) => !ids.has(edge.fromNode) && !ids.has(edge.toNode)),
+      },
+    );
+    setSelectedNodeIds([]);
+  }, [canvas, commit, selectedNodeIds]);
+
+  const exportCanvas = useCallback(() => {
+    const serialized = {
+      ...(canvas.assets ? { assets: canvas.assets } : {}),
+      ...(canvas.notes ? { notes: canvas.notes } : {}),
+      nodes: canvas.nodes,
+      edges: canvas.edges,
+    };
+    const blob = new Blob([JSON.stringify(serialized, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${editorTitle.toLowerCase().replace(/\s+/g, '-')}.canvas`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }, [canvas, editorTitle]);
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      const modifier = event.ctrlKey || event.metaKey;
+      if (modifier && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        event.shiftKey ? redo() : undo();
+        return;
+      }
+      if (modifier && event.key.toLowerCase() === 'y') {
+        event.preventDefault();
+        redo();
+        return;
+      }
+      if (modifier && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        exportCanvas();
+        return;
+      }
+      if (event.key === 'Escape') {
+        setSelectedNodeIds([]);
+        setEditingNodeId(null);
+        setEdgeSourceId(null);
+        setSelectedEdgeId(null);
+        return;
+      }
+      if (editable && (event.key === 'Delete' || event.key === 'Backspace')) {
+        event.preventDefault();
+        if (selectedEdgeId) deleteSelectedEdge();
+        else deleteSelected();
+        return;
+      }
+      if (event.key === '+' || event.key === '=') zoomIn();
+      if (event.key === '-') zoomOut();
+      if (event.key === '0') resetZoom();
+      if (event.key.toLowerCase() === 'f') fitToView();
+    },
+    [
+      deleteSelected,
+      deleteSelectedEdge,
+      editable,
+      exportCanvas,
+      fitToView,
+      redo,
+      resetZoom,
+      selectedEdgeId,
+      undo,
+      zoomIn,
+      zoomOut,
+    ],
   );
 
   return (
-    <div className="canvas-container">
+    <div ref={mermaidRootRef} className={`canvas-container ${editable ? 'canvas-editor' : ''}`}>
+      {editable && (
+        <div className="canvas-editor-banner" role="status">
+          <strong>{editorTitle}</strong>
+          <span>{history.length ? 'Unsaved changes' : 'Read-only source until exported'}</span>
+        </div>
+      )}
+      {editable && edgeSourceId && (
+        <div className="canvas-editor-banner" role="status">
+          <strong>Connect edge</strong>
+          <span>Click a target node to connect, or press Escape to cancel.</span>
+        </div>
+      )}
       <div
         ref={setContainerRef}
         className="canvas-viewport"
         role="application"
-        aria-label="Interactive canvas with nodes and connections"
+        aria-label={editable ? 'Editable canvas' : 'Interactive canvas with nodes and connections'}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onClick={handleViewportClick}
-        onDoubleClick={handleViewportDoubleClick}>
+        onPointerMove={(event) => {
+          handlePointerMove(event);
+          updateDraggedNode(event);
+        }}
+        onPointerUp={(event) => {
+          handlePointerUp(event);
+          finishNodeDrag();
+        }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setSelectedNodeIds([]);
+        }}
+        onDoubleClick={(event) => {
+          if (event.target === event.currentTarget) fitToView();
+        }}
+        onKeyDown={handleKeyDown}>
         <div className="canvas-world" style={{ transform }}>
-          {/* Real Infinite Zooming Background Grid */}
           {showGrid && <div className="canvas-background" aria-hidden="true" />}
-
-          <svg
-            className="canvas-edges"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{
-              left: 0,
-              top: 0,
-              width: 1,
-              height: 1,
-            }}
-            aria-hidden="true">
+          <svg className="canvas-edges" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <defs>
-              {data.edges.map((edge) => {
-                const color = resolveColor(edge.color);
+              {canvas.edges.map((edge) => {
+                const color = edgeColor(edge.color);
                 return (
                   <g key={edge.id}>
                     <marker
@@ -193,212 +521,239 @@ export function CanvasRenderer({ data, fileRoutePrefix, linkPreview }: CanvasRen
                 );
               })}
             </defs>
-            {data.edges.map((edge) => (
+            {canvas.edges.map((edge) => (
               <CanvasEdge
                 key={edge.id}
                 edge={edge}
                 nodeMap={nodeMap}
                 isHighlighted={connectedEdgeIds.has(edge.id)}
+                isSelected={selectedEdgeId === edge.id}
+                onSelect={editable ? (id) => setSelectedEdgeId(id) : undefined}
               />
             ))}
           </svg>
-          {sortedNodes.map((node) => (
-            <CanvasNodeComponent
+          {canvas.nodes.map((node, index) => (
+            // biome-ignore lint/a11y/noStaticElementInteractions: editor node wrapper owns drag and resize gestures
+            <div
               key={node.id}
-              node={node}
-              isHovered={node.id === hoveredNodeId}
-              isSelected={node.id === selectedNodeId}
-              fileRoutePrefix={fileRoutePrefix}
-              linkPreview={linkPreview}
-              onHover={handleNodeHover}
-              onClick={(nodeId) => setSelectedNodeId(nodeId)}
-            />
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                selectNode(node.id, event);
+                startNodeDrag(node, event);
+              }}
+              onDoubleClick={() => {
+                if (editable && node.type === 'text') {
+                  setEditingNodeId(node.id);
+                  setDraftText(node.text);
+                }
+              }}
+              className="canvas-editor-node-wrapper"
+              style={{
+                position: 'absolute',
+                left: node.x,
+                top: node.y,
+                width: node.width,
+                height: node.height,
+                zIndex: index + 1,
+              }}>
+              <CanvasNodeComponent
+                node={node}
+                assets={canvas.assets}
+                notes={canvas.notes}
+                zIndex={index + 1}
+                isHovered={node.id === hoveredNodeId}
+                isSelected={selectedNodeIds.includes(node.id)}
+                fileRoutePrefix={fileRoutePrefix}
+                linkPreview={linkPreview}
+                onHover={setHoveredNodeId}
+                onClick={handleNodeClick}
+              />
+              {editable && selectedNodeIds.includes(node.id) && (
+                <button
+                  type="button"
+                  className="canvas-resize-handle"
+                  aria-label={`Resize ${node.id}`}
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                    resizeRef.current = {
+                      id: node.id,
+                      startX: event.clientX,
+                      startY: event.clientY,
+                      originX: node.width,
+                      originY: node.height,
+                    };
+                  }}
+                />
+              )}
+              {editable && editingNodeId === node.id && node.type === 'text' && (
+                <textarea
+                  // biome-ignore lint/a11y/noAutofocus: focus is required for immediate text-card editing
+                  autoFocus
+                  className="canvas-editor-textarea"
+                  value={draftText}
+                  onChange={(event) => setDraftText(event.target.value)}
+                  onBlur={() => {
+                    const updated = { ...node, text: draftText } as CanvasNode;
+                    commit(
+                      { type: 'update', id: node.id, from: node, to: updated },
+                      {
+                        ...cloneData(canvas),
+                        nodes: canvas.nodes.map((item) => (item.id === node.id ? updated : item)),
+                      },
+                    );
+                    setEditingNodeId(null);
+                  }}
+                />
+              )}
+            </div>
           ))}
         </div>
       </div>
-
-      {/* Floating Vertical Toolbar (upper right) */}
-      <div className="canvas-toolbar" role="toolbar" aria-label="Canvas vertical controls">
+      <div className="canvas-toolbar" role="toolbar" aria-label="Canvas controls">
+        {editable && (
+          <>
+            <button
+              type="button"
+              className="canvas-toolbar-btn"
+              onClick={createTextCard}
+              aria-label="Add text card"
+              title="Add text card">
+              ＋
+            </button>
+            <button
+              type="button"
+              className="canvas-toolbar-btn"
+              onClick={createFileCard}
+              aria-label="Add file card"
+              title="Add file card">
+              🗎
+            </button>
+            <button
+              type="button"
+              className="canvas-toolbar-btn"
+              onClick={createLinkCard}
+              aria-label="Add link card"
+              title="Add link card">
+              🔗
+            </button>
+            <button
+              type="button"
+              className="canvas-toolbar-btn"
+              onClick={createGroupCard}
+              aria-label="Add group"
+              title="Add group">
+              ▭
+            </button>
+            <button
+              type="button"
+              className="canvas-toolbar-btn"
+              onClick={() => {
+                if (selectedNodeIds.length === 0) return;
+                setEdgeSourceId(selectedNodeIds[0]);
+              }}
+              disabled={!selectedNodeIds.length}
+              aria-label="Connect edge from selected node"
+              title="Connect edge (click source, then target node)">
+              ⇄
+            </button>
+            <button
+              type="button"
+              className="canvas-toolbar-btn"
+              onClick={deleteSelectedEdge}
+              disabled={!selectedEdgeId}
+              aria-label="Delete selected edge"
+              title="Delete selected edge">
+              ⌫
+            </button>
+            <button
+              type="button"
+              className="canvas-toolbar-btn"
+              onClick={deleteSelected}
+              disabled={!selectedNodeIds.length}
+              aria-label="Delete selected"
+              title="Delete selected">
+              ⌫
+            </button>
+            <button
+              type="button"
+              className="canvas-toolbar-btn"
+              onClick={undo}
+              disabled={!history.length}
+              aria-label="Undo"
+              title="Undo">
+              ↶
+            </button>
+            <button
+              type="button"
+              className="canvas-toolbar-btn"
+              onClick={redo}
+              disabled={!future.length}
+              aria-label="Redo"
+              title="Redo">
+              ↷
+            </button>
+            <button
+              type="button"
+              className="canvas-toolbar-btn"
+              onClick={exportCanvas}
+              aria-label="Export canvas"
+              title="Export canvas">
+              ⇩
+            </button>
+          </>
+        )}
         <button
-          className={`canvas-toolbar-btn ${!showGrid ? 'canvas-btn-inactive' : ''}`}
-          onClick={() => setShowGrid((p) => !p)}
-          title="Toggle Grid Dots"
-          aria-label="Toggle Grid Dots">
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
-        <div className="canvas-toolbar-sep" />
-        <button
+          type="button"
           className="canvas-toolbar-btn"
-          onClick={zoomIn}
-          title="Zoom In"
-          aria-label="Zoom in">
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          onClick={() => setShowGrid((value) => !value)}
+          aria-label="Toggle Grid Dots">
+          ⚙
+        </button>
+        <button type="button" className="canvas-toolbar-btn" onClick={zoomIn} aria-label="Zoom in">
+          ＋
         </button>
         <button
+          type="button"
           className="canvas-toolbar-btn"
           onClick={resetZoom}
-          title="Reset Scale (1:1)"
           aria-label="Reset zoom (1:1)">
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
+          ◎
         </button>
         <button
+          type="button"
           className="canvas-toolbar-btn"
           onClick={fitToView}
-          title="Fit to View"
           aria-label="Fit to View">
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <path d="M15 3h6v6M9 21H3v-6M21 15v6h-6M3 9V3h6" />
-          </svg>
+          ⛶
         </button>
         <button
+          type="button"
           className="canvas-toolbar-btn"
           onClick={zoomOut}
-          title="Zoom Out"
           aria-label="Zoom out">
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-        <div className="canvas-toolbar-sep" />
-        <button
-          className="canvas-toolbar-btn canvas-btn-disabled"
-          title="Undo"
-          aria-label="Undo"
-          disabled>
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <path d="M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
-          </svg>
+          −
         </button>
         <button
-          className="canvas-toolbar-btn canvas-btn-disabled"
-          title="Redo"
-          aria-label="Redo"
-          disabled>
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <path d="M21 7v6h-6M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
-          </svg>
-        </button>
-        <div className="canvas-toolbar-sep" />
-        <button
-          className={`canvas-toolbar-btn ${showHelp ? 'canvas-btn-active' : ''}`}
-          onClick={() => setShowHelp((p) => !p)}
-          title="Help & Info"
+          type="button"
+          className="canvas-toolbar-btn"
+          onClick={() => setShowHelp((value) => !value)}
           aria-label="Help">
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
-          </svg>
+          ?
         </button>
       </div>
-
-      {/* Sleek Floating Help Dialog */}
       {showHelp && (
         <div className="canvas-help-modal">
           <div className="canvas-help-header">
             <h3>Canvas Controls</h3>
-            <button className="canvas-help-close" onClick={() => setShowHelp(false)}>
+            <button type="button" onClick={() => setShowHelp(false)}>
               ×
             </button>
           </div>
-          <div className="canvas-help-body">
-            <div className="canvas-help-row">
-              <span className="canvas-help-key">Pan</span>
-              <span className="canvas-help-desc">Hold Left / Middle Mouse & Drag</span>
-            </div>
-            <div className="canvas-help-row">
-              <span className="canvas-help-key">Zoom</span>
-              <span className="canvas-help-desc">Scroll Mouse Wheel</span>
-            </div>
-            <div className="canvas-help-row">
-              <span className="canvas-help-key">Fit All</span>
-              <span className="canvas-help-desc">Double-click background or Fit icon (⛶)</span>
-            </div>
-            <div className="canvas-help-row">
-              <span className="canvas-help-key">Reset scale</span>
-              <span className="canvas-help-desc">Click center target icon (1:1)</span>
-            </div>
-            <div className="canvas-help-row">
-              <span className="canvas-help-key">Toggle grid</span>
-              <span className="canvas-help-desc">Click settings gear icon</span>
-            </div>
-            <div className="canvas-help-row">
-              <span className="canvas-help-key">Select card</span>
-              <span className="canvas-help-desc">Click note. Click space to clear focus</span>
-            </div>
-          </div>
+          <p>
+            {editable
+              ? 'Double-click text to edit. Drag cards to move. Shift-click for multi-selection. Select a node, then ⇄ to connect an edge to another node. Click an edge to select it. Delete removes selected cards/edges. Ctrl/Cmd+S exports.'
+              : 'Drag to pan. Scroll to zoom. Double-click the background to fit the canvas.'}
+          </p>
         </div>
       )}
     </div>

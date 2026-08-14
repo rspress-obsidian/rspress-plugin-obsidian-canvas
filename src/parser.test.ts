@@ -348,7 +348,7 @@ test('x, y, width, height must be finite numbers', () => {
     ],
     edges: [],
   });
-  expect(() => parseCanvas(json)).toThrow(/node\.x.*number/);
+  expect(() => parseCanvas(json)).toThrow(/node\.x.*finite number/);
 });
 
 test('color can be hex, preset, or rgb', () => {
@@ -459,4 +459,56 @@ test('parses real Demo.canvas file', async () => {
   expect(data.nodes).toHaveLength(5);
   expect(data.edges).toHaveLength(3);
   expect(data.nodes.map((n) => n.type)).toEqual(['group', 'file', 'text', 'text', 'link']);
+});
+test('accepts fractional geometry', () => {
+  const canvas = {
+    nodes: [
+      {
+        id: 'n1',
+        type: 'text',
+        x: 0.5,
+        y: -10.25,
+        width: 100,
+        height: 100,
+        text: 'text',
+      },
+    ],
+    edges: [],
+  };
+  const data = parseCanvas(JSON.stringify(canvas));
+  expect(data.nodes[0]?.x).toBe(0.5);
+  expect(data.nodes[0]?.y).toBe(-10.25);
+});
+
+test('rejects non-finite geometry', () => {
+  for (const value of [Infinity, -Infinity, NaN]) {
+    const canvas = {
+      nodes: [{ id: 'n1', type: 'text', x: value, y: 0, width: 100, height: 100, text: 'text' }],
+      edges: [],
+    };
+    expect(() => parseCanvas(JSON.stringify(canvas))).toThrow(/node\.x.*finite number/);
+  }
+});
+
+test('rejects duplicate node and edge ids', () => {
+  const duplicateNodes = {
+    nodes: [
+      { id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'a' },
+      { id: 'n1', type: 'text', x: 100, y: 0, width: 100, height: 100, text: 'b' },
+    ],
+    edges: [],
+  };
+  expect(() => parseCanvas(JSON.stringify(duplicateNodes))).toThrow(/Duplicate node id/);
+
+  const duplicateEdges = {
+    nodes: [
+      { id: 'n1', type: 'text', x: 0, y: 0, width: 100, height: 100, text: 'a' },
+      { id: 'n2', type: 'text', x: 100, y: 0, width: 100, height: 100, text: 'b' },
+    ],
+    edges: [
+      { id: 'e1', fromNode: 'n1', toNode: 'n2' },
+      { id: 'e1', fromNode: 'n2', toNode: 'n1' },
+    ],
+  };
+  expect(() => parseCanvas(JSON.stringify(duplicateEdges))).toThrow(/Duplicate edge id/);
 });

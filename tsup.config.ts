@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsup';
+import { minifyCssFile } from './scripts/minify-css';
 
 export default defineConfig([
   {
@@ -16,7 +17,7 @@ export default defineConfig([
     entry: ['src/components/CanvasViewer.tsx'],
     format: ['esm'],
     outDir: 'dist/components',
-    external: ['react', 'react-dom'],
+    external: ['react', 'react-dom', 'mermaid'],
     target: 'es2020',
     dts: false,
     noExternal: ['marked'],
@@ -26,5 +27,8 @@ export default defineConfig([
     format: ['esm'],
     outDir: 'dist',
     target: 'es2020',
+    onSuccess: async () => {
+      await minifyCssFile('dist/canvas.css');
+    },
   },
 ]);

@@ -5,13 +5,13 @@ description: Full JSON Canvas 1.0 spec support — node types, edges, colors, an
 
 # Canvas Format
 
-This plugin implements the [JSON Canvas 1.0](https://jsoncanvas.org/spec/1.0/) specification. Every field defined by the spec is parsed, validated, and rendered.
+This plugin parses and renders the JSON Canvas 1.0 structure in read-only mode. It preserves the node array z-order and validates required fields, IDs, geometry, edge references, and enum values.
 
 ## Node Types
 
 ### Text Nodes
 
-Store Markdown content. All standard Markdown syntax is supported plus Obsidian-specific extensions.
+Store Markdown content. Standard Markdown and common Obsidian link/embed syntax are supported. HTML and unsafe URL protocols are escaped or rejected.
 
 ```json
 {
@@ -43,11 +43,16 @@ Store Markdown content. All standard Markdown syntax is supported plus Obsidian-
 | Ordered lists | `1. item` |
 | Horizontal rules | `---`, `***`, `___` |
 | Auto-links | `<https://url>` |
-| Wiki-links | `[[Note]]` or `[[Note\|Display]]` |
+| Wiki-links and embeds | `[[Note]]`, `[[Note\|Alias]]`, `![[image.png]]` |
+| Callouts | `> [!note]`, `> [!tip]`, `> [!warning]`, `> [!danger]`, etc. |
+| Math | `$inline$` and `$$display$$` (KaTeX) |
+| Mermaid diagrams | ` ```mermaid ` ... ` ``` ` |
+| Tags | `#tag`, `#nested/tag` |
+| Footnotes | `[^1]` references and `[^1]:` definitions |
 
 ### File Nodes
 
-Reference files within your vault. These render as clickable cards that link to the corresponding Rspress page.
+Reference notes and attachments within your vault. These render as clickable cards that link to the corresponding Rspress page or as embedded media when the file is available at build time.
 
 ```json
 {
@@ -63,7 +68,7 @@ Reference files within your vault. These render as clickable cards that link to 
 }
 ```
 
-Markdown files (`.md`, `.mdx`, `.markdown`) are resolved to Rspress routes. Non-Markdown files (images, PDFs) pass through as direct paths.
+Markdown files (`.md`, `.mdx`, `.markdown`) are resolved to Rspress routes. Images, audio, video, and PDFs are embedded into generated pages as build-time data URLs. Other files remain link cards.
 
 ### Link Nodes
 
@@ -132,7 +137,7 @@ Connect nodes with cubic bezier curves.
 | `color` | hex or preset `"1"`–`"6"` | `#999999` |
 | `label` | any string | none |
 
-Hovering a node highlights all connected edges.
+Hovering or selecting a node highlights all connected edges. Heading subpaths (`#heading`) and block subpaths (`#^block-id`) are resolved for Markdown file cards.
 
 ## Colors
 
@@ -141,3 +146,7 @@ Both nodes and edges support the `canvasColor` type:
 - **Hex**: `"#ff0000"`
 - **RGB**: `"rgb(255, 0, 0)"`
 - **Preset**: `"1"` (red), `"2"` (orange), `"3"` (yellow), `"4"` (green), `"5"` (cyan), `"6"` (purple)
+
+## Read-only scope
+
+The plugin does not edit `.canvas` files. Creating, moving, resizing, deleting, or multi-selecting cards and edges, plus undo/redo, remain Obsidian-only interactions.

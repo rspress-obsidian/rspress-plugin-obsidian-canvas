@@ -6,18 +6,22 @@ interface CanvasViewerProps {
   canvasJson: string;
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  editable?: boolean;
+  editorTitle?: string;
 }
 
 export default function CanvasViewer({
   canvasJson,
   fileRoutePrefix,
   linkPreview,
+  editable,
+  editorTitle,
 }: CanvasViewerProps) {
   const data = useMemo(() => {
     try {
       return parseCanvas(canvasJson);
-    } catch (e) {
-      console.error('Failed to parse canvas:', e);
+    } catch (error) {
+      console.error('Failed to parse canvas:', error);
       return null;
     }
   }, [canvasJson]);
@@ -26,5 +30,13 @@ export default function CanvasViewer({
     return <div className="canvas-error">Failed to load canvas. Check console for details.</div>;
   }
 
-  return <CanvasRenderer data={data} fileRoutePrefix={fileRoutePrefix} linkPreview={linkPreview} />;
+  return (
+    <CanvasRenderer
+      data={data}
+      fileRoutePrefix={fileRoutePrefix}
+      linkPreview={linkPreview}
+      editable={editable}
+      editorTitle={editorTitle}
+    />
+  );
 }

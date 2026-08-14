@@ -28,7 +28,9 @@ export interface CanvasFileData extends CanvasNodeData {
   file: string;
   subpath?: string;
   fileContent?: string;
+  assetUrl?: string;
   imageUrl?: string;
+  mediaType?: string;
   isImage?: boolean;
   isError?: boolean;
 }
@@ -42,6 +44,7 @@ export interface CanvasGroupData extends CanvasNodeData {
   type: 'group';
   label?: string;
   background?: string;
+  backgroundUrl?: string;
   backgroundStyle?: BackgroundStyle;
 }
 
@@ -62,8 +65,9 @@ export interface CanvasEdgeData {
 export interface CanvasData {
   nodes: CanvasNode[];
   edges: CanvasEdgeData[];
+  assets?: Record<string, string>;
+  notes?: Record<string, string>;
 }
-
 export interface CanvasPluginOptions {
   vaultRoot?: string;
   routePrefix?: string;
@@ -71,4 +75,6 @@ export interface CanvasPluginOptions {
   exclude?: string[];
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  editable?: boolean;
+  editorTitle?: string;
 }

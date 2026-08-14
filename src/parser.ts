@@ -10,6 +10,7 @@ export class CanvasParseError extends Error {
 const VALID_NODE_TYPES = ['text', 'file', 'link', 'group'] as const;
 const VALID_SIDES = ['top', 'right', 'bottom', 'left'] as const;
 const VALID_EDGE_ENDS = ['none', 'arrow'] as const;
+const VALID_BACKGROUND_STYLES = ['cover', 'ratio', 'repeat'] as const;
 
 function assertString(value: unknown, field: string): string {
   if (typeof value !== 'string') {
@@ -20,7 +21,7 @@ function assertString(value: unknown, field: string): string {
 
 function assertNumber(value: unknown, field: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new CanvasParseError(`Expected ${field} to be a number, got ${typeof value}`);
+    throw new CanvasParseError(`Expected ${field} to be a finite number, got ${typeof value}`);
   }
   return value;
 }
@@ -60,10 +61,37 @@ function validateNode(node: unknown): CanvasNode {
       const file = assertString(n.file, 'node.file');
       const subpath = assertOptionalString(n.subpath, 'node.subpath');
       const fileContent = assertOptionalString(n.fileContent, 'node.fileContent');
+      const assetUrl = assertOptionalString(n.assetUrl, 'node.assetUrl');
       const imageUrl = assertOptionalString(n.imageUrl, 'node.imageUrl');
-      const isImage = n.isImage !== undefined ? Boolean(n.isImage) : undefined;
-      const isError = n.isError !== undefined ? Boolean(n.isError) : undefined;
-      return { ...base, type: 'file', file, subpath, fileContent, imageUrl, isImage, isError };
+      const mediaType = assertOptionalString(n.mediaType, 'node.mediaType');
+      const isImage =
+        n.isImage === undefined
+          ? undefined
+          : typeof n.isImage === 'boolean'
+            ? n.isImage
+            : (() => {
+                throw new CanvasParseError('Expected node.isImage to be a boolean');
+              })();
+      const isError =
+        n.isError === undefined
+          ? undefined
+          : typeof n.isError === 'boolean'
+            ? n.isError
+            : (() => {
+                throw new CanvasParseError('Expected node.isError to be a boolean');
+              })();
+      return {
+        ...base,
+        type: 'file',
+        file,
+        subpath,
+        fileContent,
+        assetUrl,
+        imageUrl,
+        mediaType,
+        isImage,
+        isError,
+      };
     }
     case 'link': {
       const url = assertString(n.url, 'node.url');
@@ -72,12 +100,22 @@ function validateNode(node: unknown): CanvasNode {
     case 'group': {
       const label = assertOptionalString(n.label, 'node.label');
       const background = assertOptionalString(n.background, 'node.background');
+      const backgroundUrl = assertOptionalString(n.backgroundUrl, 'node.backgroundUrl');
       const backgroundStyle = assertOptionalString(n.backgroundStyle, 'node.backgroundStyle');
+      if (
+        backgroundStyle &&
+        !VALID_BACKGROUND_STYLES.includes(
+          backgroundStyle as (typeof VALID_BACKGROUND_STYLES)[number],
+        )
+      ) {
+        throw new CanvasParseError(`Invalid backgroundStyle: ${backgroundStyle}`);
+      }
       return {
         ...base,
         type: 'group',
         label,
         background,
+        backgroundUrl,
         backgroundStyle: backgroundStyle as 'cover' | 'ratio' | 'repeat' | undefined,
       };
     }
@@ -167,8 +205,20 @@ export function parseCanvas(json: string): CanvasData {
     }
   }
 
-  const nodeIds = new Set(nodes.map((n) => n.id));
+  const nodeIds = new Set<string>();
+  for (const node of nodes) {
+    if (nodeIds.has(node.id)) {
+      throw new CanvasParseError(`Duplicate node id: ${node.id}`);
+    }
+    nodeIds.add(node.id);
+  }
+
+  const edgeIds = new Set<string>();
   for (const edge of edges) {
+    if (edgeIds.has(edge.id)) {
+      throw new CanvasParseError(`Duplicate edge id: ${edge.id}`);
+    }
+    edgeIds.add(edge.id);
     if (!nodeIds.has(edge.fromNode)) {
       throw new CanvasParseError(`Edge ${edge.id} references unknown fromNode: ${edge.fromNode}`);
     }
@@ -177,5 +227,26 @@ export function parseCanvas(json: string): CanvasData {
     }
   }
 
-  return { nodes, edges };
+  let assets: Record<string, string> | undefined;
+  if (d.assets !== undefined) {
+    if (typeof d.assets !== 'object' || d.assets === null || Array.isArray(d.assets)) {
+      throw new CanvasParseError('assets must be an object');
+    }
+    assets = {};
+    for (const [key, value] of Object.entries(d.assets)) {
+      assets[key] = assertString(value, `assets.${key}`);
+    }
+  }
+  let notes: Record<string, string> | undefined;
+  if (d.notes !== undefined) {
+    if (typeof d.notes !== 'object' || d.notes === null || Array.isArray(d.notes)) {
+      throw new CanvasParseError('notes must be an object');
+    }
+    notes = {};
+    for (const [key, value] of Object.entries(d.notes)) {
+      notes[key] = assertString(value, `notes.${key}`);
+    }
+  }
+
+  return { nodes, edges, assets, notes };
 }
