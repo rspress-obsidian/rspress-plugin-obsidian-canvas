@@ -14,7 +14,7 @@ export default defineConfig([
     splitting: true,
   },
   {
-    entry: ['src/components/CanvasViewer.tsx'],
+    entry: ['src/components/CanvasViewer.tsx', 'src/components/CanvasEmbed.tsx'],
     format: ['esm'],
     outDir: 'dist/components',
     external: ['react', 'react-dom', 'mermaid'],

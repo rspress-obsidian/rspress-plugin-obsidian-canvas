@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { RspressPlugin } from '@rspress/core';
 import { slug } from 'github-slugger';
@@ -240,20 +240,26 @@ export function pluginObsidianCanvas(options?: CanvasPluginOptions): RspressPlug
     linkPreview: options?.linkPreview || false,
     editable: options?.editable || false,
     editorTitle: options?.editorTitle || 'Canvas editor',
+    iframeSandbox: options?.iframeSandbox || 'allow-scripts allow-same-origin allow-popups',
   };
   const baseDir = import.meta.dirname || __dirname;
   let componentPath = path.join(baseDir, 'components', 'CanvasViewer.js');
   if (!existsSync(componentPath)) {
     componentPath = path.join(baseDir, 'components', 'CanvasViewer.tsx');
   }
-  let stylePath = path.join(import.meta.dirname || __dirname, 'canvas.css');
-  if (!existsSync(stylePath))
-    stylePath = path.join(import.meta.dirname || __dirname, 'styles', 'canvas.css');
+  let embedComponentPath = path.join(baseDir, 'components', 'CanvasEmbed.js');
+  if (!existsSync(embedComponentPath)) {
+    embedComponentPath = path.join(baseDir, 'components', 'CanvasEmbed.tsx');
+  }
+  let stylePath = path.join(baseDir, 'canvas.css');
+  if (!existsSync(stylePath)) {
+    stylePath = path.join(baseDir, 'styles', 'canvas.css');
+  }
 
   return {
     name: 'rspress-plugin-obsidian-canvas',
     globalStyles: stylePath,
-    async addPages(_config, _isProd) {
+    async addPages(config, _isProd) {
       // Runtime loading keeps fast-glob server-only in the published package.
       const { default: glob } = await import('fast-glob');
       const canvasFiles = await glob(resolvedOptions.include, {
@@ -262,7 +268,15 @@ export function pluginObsidianCanvas(options?: CanvasPluginOptions): RspressPlug
         cwd: resolvedOptions.vaultRoot,
       });
       const routeOwners = new Map<string, string>();
-      return Promise.all(
+
+      // Resolve the docs root for writing embed JSON into the public dir.
+      const rootDir =
+        config && typeof config === 'object' && 'root' in config
+          ? String((config as Record<string, unknown>).root)
+          : path.join(process.cwd(), 'docs');
+      const publicCanvasesDir = path.join(rootDir, 'public', '__canvases__');
+
+      const pages = await Promise.all(
         canvasFiles.map(async (filePath) => {
           const routePath = resolveCanvasRoute(
             filePath,
@@ -286,13 +300,29 @@ export function pluginObsidianCanvas(options?: CanvasPluginOptions): RspressPlug
               error,
             );
           }
+
+          // Write enriched JSON so `<CanvasEmbed src="X.canvas" />` can fetch it.
+          const relPath = path.relative(resolvedOptions.vaultRoot, filePath);
+          const jsonName = relPath.replace(/\.canvas$/i, '.json');
+          const outFilePath = path.join(publicCanvasesDir, jsonName);
+          try {
+            await mkdir(path.dirname(outFilePath), { recursive: true });
+            await writeFile(outFilePath, enrichedCanvasJson, 'utf-8');
+          } catch (writeErr) {
+            console.error(
+              `[rspress-plugin-obsidian-canvas] Failed to write embed JSON: ${outFilePath}`,
+              writeErr,
+            );
+          }
+
           return {
             routePath,
             content: `<CanvasViewer canvasJson={${JSON.stringify(enrichedCanvasJson)}} fileRoutePrefix={${JSON.stringify(resolvedOptions.fileRoutePrefix)}} linkPreview={${JSON.stringify(resolvedOptions.linkPreview)}} editable={${JSON.stringify(resolvedOptions.editable)}} editorTitle={${JSON.stringify(resolvedOptions.editorTitle)}} />`,
           };
         }),
       );
+      return pages;
     },
-    markdown: { globalComponents: [componentPath] },
+    markdown: { globalComponents: [componentPath, embedComponentPath] },
   };
 }

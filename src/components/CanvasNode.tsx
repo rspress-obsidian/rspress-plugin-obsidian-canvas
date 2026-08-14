@@ -52,7 +52,6 @@ export const CanvasNodeComponent = memo(function CanvasNodeComponent({
 }: CanvasNodeProps) {
   const borderColor = nodeBorderColor(node.color);
   return (
-    // biome-ignore lint/a11y/useSemanticElements: canvas nodes contain nested links and media, so a button would be invalid
     <div
       style={{
         position: 'absolute',
@@ -151,9 +150,7 @@ function NodeContent({
               {kind === 'image' && (
                 <img className="canvas-file-image" src={assetUrl} alt={node.file} />
               )}
-              {/* biome-ignore lint/a11y/useMediaCaption: JSON Canvas does not carry caption-track metadata */}
               {kind === 'audio' && <audio className="canvas-file-media" controls src={assetUrl} />}
-              {/* biome-ignore lint/a11y/useMediaCaption: JSON Canvas does not carry caption-track metadata */}
               {kind === 'video' && <video className="canvas-file-media" controls src={assetUrl} />}
               {kind === 'pdf' && (
                 <iframe className="canvas-file-pdf" src={assetUrl} title={node.file} />

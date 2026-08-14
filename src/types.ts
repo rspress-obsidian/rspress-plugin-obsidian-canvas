@@ -32,6 +32,9 @@ export interface CanvasFileData extends CanvasNodeData {
   imageUrl?: string;
   mediaType?: string;
   isImage?: boolean;
+  isVideo?: boolean;
+  isAudio?: boolean;
+  isPdf?: boolean;
   isError?: boolean;
 }
 
@@ -77,4 +80,9 @@ export interface CanvasPluginOptions {
   linkPreview?: boolean;
   editable?: boolean;
   editorTitle?: string;
+  /**
+   * Sandbox attributes for iframes used in link previews and PDF rendering.
+   * @default "allow-scripts allow-same-origin allow-popups"
+   */
+  iframeSandbox?: string;
 }

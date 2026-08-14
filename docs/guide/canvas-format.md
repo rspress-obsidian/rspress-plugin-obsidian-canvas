@@ -112,7 +112,7 @@ Groups render behind their contents with a dashed border. Background images supp
 
 ## Edges
 
-Connect nodes with cubic bezier curves.
+Connect nodes with intelligent, orthogonal, collision-avoiding paths. The routing algorithm automatically calculates paths that avoid overlapping other nodes, ensuring maximum readability.
 
 ```json
 {

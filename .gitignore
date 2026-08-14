@@ -1,40 +1,63 @@
-# dependencies (bun install)
-node_modules
+# --- Dependencies ---
+node_modules/
 
-# output
-out
-dist
+# --- Build output ---
+out/
+dist/
 *.tgz
 
-# code coverage
-coverage
+# --- Rspress ---
+doc_build/
+.rspress/
+docs/public/__canvases__/
+
+# --- Artifacts from incorrect embed JSON output (path resolution bug) ---
+home/
+
+# --- Code coverage ---
+coverage/
 *.lcov
 
-# logs
-logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+# --- Logs ---
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
 
-# dotenv environment variable files
+# --- Environment files ---
 .env
-.env.development.local
-.env.test.local
-.env.production.local
+.env.development
+.env.production
+.env.test
 .env.local
+.env.*.local
 
-# caches
+# --- Cache directories ---
 .eslintcache
-.cache
+.cache/
 *.tsbuildinfo
 
-# IntelliJ based IDEs
-.idea
+# --- Editor / IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
 
-# Finder (MacOS) folder config
+# --- OS files ---
 .DS_Store
+Thumbs.db
 
-# playwright
-.playwright-mcp
+# --- Playwright ---
+.playwright-mcp/
+test-results/
+playwright-report/
 
-# rspress build output
-doc_build
+# --- OpenCode ---
+.omo/
+
+# --- CommandCode ---
+.commandcode/

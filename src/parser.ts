@@ -72,6 +72,30 @@ function validateNode(node: unknown): CanvasNode {
             : (() => {
                 throw new CanvasParseError('Expected node.isImage to be a boolean');
               })();
+      const isVideo =
+        n.isVideo === undefined
+          ? undefined
+          : typeof n.isVideo === 'boolean'
+            ? n.isVideo
+            : (() => {
+                throw new CanvasParseError('Expected node.isVideo to be a boolean');
+              })();
+      const isAudio =
+        n.isAudio === undefined
+          ? undefined
+          : typeof n.isAudio === 'boolean'
+            ? n.isAudio
+            : (() => {
+                throw new CanvasParseError('Expected node.isAudio to be a boolean');
+              })();
+      const isPdf =
+        n.isPdf === undefined
+          ? undefined
+          : typeof n.isPdf === 'boolean'
+            ? n.isPdf
+            : (() => {
+                throw new CanvasParseError('Expected node.isPdf to be a boolean');
+              })();
       const isError =
         n.isError === undefined
           ? undefined
@@ -90,6 +114,9 @@ function validateNode(node: unknown): CanvasNode {
         imageUrl,
         mediaType,
         isImage,
+        isVideo,
+        isAudio,
+        isPdf,
         isError,
       };
     }

@@ -1,26 +1,39 @@
-# Auto-detect text files and perform lf normalization
+# Auto-detect text files and normalize to LF
 * text=auto
 
-# Explicitly declare text files you want to always be normalized
+# --- Source code (normalized as text) ---
 *.ts text
 *.tsx text
 *.js text
 *.jsx text
-*.json text
 *.css text
 *.md text
 *.mdx text
 *.html text
+*.json text
 *.yml text
 *.yaml text
 *.toml text
+*.sh text eol=lf
 
-# Denote all files that are binary in nature
+# --- Config & dotfiles ---
+.env text
+.env.* text
+.gitignore text
+.gitattributes text
+.editorconfig text
+.npmrc text
+.nvmrc text
+
+# --- Canvas files (JSON-based, should diff properly) ---
+*.canvas text
+
+# --- Binary ---
 *.png binary
 *.jpg binary
 *.jpeg binary
 *.gif binary
 *.svg binary
 *.ico binary
-*.canvas binary
+bun.lock binary
 *.lock binary

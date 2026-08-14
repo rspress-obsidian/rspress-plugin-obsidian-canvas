@@ -20,9 +20,10 @@ test('built package resolves its canvas component to an existing file', async ()
   const components = plugin.markdown?.globalComponents;
 
   expect(components).toBeDefined();
-  expect(components).toHaveLength(1);
+  expect(components).toHaveLength(2);
 
-  const componentPath = components?.[0];
-  expect(typeof componentPath).toBe('string');
-  expect(existsSync(componentPath as string)).toBe(true);
+  for (const componentPath of components ?? []) {
+    expect(typeof componentPath).toBe('string');
+    expect(existsSync(componentPath as string)).toBe(true);
+  }
 });
