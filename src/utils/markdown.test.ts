@@ -222,6 +222,15 @@ test('rejects unsafe HTML and URL protocols', () => {
   expect(html).not.toContain('javascript:');
   expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
 });
+test('escapes HTML in footnote definitions while preserving markdown formatting', () => {
+  const html = renderMarkdown('Text[^1].\n\n[^1]: <img src=x onerror=alert(1)> **bold**');
+  expect(html).not.toContain('<img src=x');
+  expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+  expect(html).toContain('<strong>bold</strong>');
+});
+test('rejects protocol-relative media URLs', () => {
+  expect(renderMarkdown('![remote](//evil.example/image.png)')).not.toContain('src="//evil.example');
+});
 test('embeds a referenced Markdown note with a recursion limit', () => {
   const html = renderMarkdown('![[Welcome]]', {
     notes: { 'welcome.md': '# Welcome\n\n[[Welcome]]' },

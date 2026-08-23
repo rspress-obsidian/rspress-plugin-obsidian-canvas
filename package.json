@@ -42,8 +42,9 @@
     "format:check": "biome format",
     "lint": "biome lint",
     "check": "biome check --write",
+    "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "prepublishOnly": "bun run check && bun run build"
+    "prepublishOnly": "bun run check && bun run typecheck && bun run build"
   },
   "peerDependencies": {
     "@rspress/core": "^2.0.12",

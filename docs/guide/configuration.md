@@ -17,6 +17,7 @@ Customize how the plugin discovers canvas files and generates routes.
 | `exclude` | `string[]` | `[]` | Glob patterns to ignore when scanning |
 | `fileRoutePrefix` | `string` | — | URL prefix prepended to resolved Markdown file routes (e.g. `/docs`) |
 | `linkPreview` | `boolean` | `false` | Render link nodes as embedded iframes |
+| `iframeSandbox` | `string` | `allow-scripts allow-same-origin allow-popups` | Sandbox attributes applied to link-preview and PDF iframes |
 | `editable` | `boolean` | `false` | Enable browser-side editing controls |
 | `editorTitle` | `string` | `Canvas editor` | Editor banner and export filename |
 
@@ -75,17 +76,18 @@ pluginObsidianCanvas({
 
 Without this option, file nodes link to `/<filename>` directly.
 
-## linkPreview
+## linkPreview and iframeSandbox
 
-Enable iframe previews for link nodes:
+Enable iframe previews for link nodes and optionally customize the sandbox:
 
 ```ts
 pluginObsidianCanvas({
   linkPreview: true,
+  iframeSandbox: 'allow-scripts allow-same-origin',
 })
 ```
 
-When enabled, link nodes render an embedded iframe of the target URL instead of just displaying the URL text. The iframe uses `sandbox="allow-scripts allow-same-origin allow-popups"` for security.
+When enabled, link nodes render an embedded iframe of the target URL. The default sandbox is `allow-scripts allow-same-origin allow-popups`. A stricter value can be supplied when the embedded content does not require popups.
 
 ## Editor mode
 

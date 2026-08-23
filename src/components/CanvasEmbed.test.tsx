@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { render } from '@testing-library/react';
-import CanvasEmbed from './CanvasEmbed';
+import CanvasEmbed, { resolveCanvasJsonUrl } from './CanvasEmbed';
 
 const mockCanvasJson = JSON.stringify({
   nodes: [{ id: 'n1', type: 'text', text: 'Hello', x: 0, y: 0, width: 200, height: 100 }],
@@ -10,7 +10,7 @@ const mockCanvasJson = JSON.stringify({
 const origFetch = globalThis.fetch;
 
 beforeEach(() => {
-  globalThis.fetch = (input: RequestInfo | URL) => {
+  globalThis.fetch = ((input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     if (url.includes('nonexistent')) {
       return Promise.reject(new Error('Not found'));
@@ -21,7 +21,7 @@ beforeEach(() => {
         headers: { 'Content-Type': 'application/json' },
       }),
     );
-  };
+  }) as typeof fetch;
 });
 
 afterEach(() => {
@@ -69,4 +69,9 @@ test('renders with .json extension', () => {
 test('renders without canvas extension', () => {
   const { container } = render(<CanvasEmbed src="Demo" />);
   expect(container.querySelector('.canvas-embed-loading')).toBeTruthy();
+});
+test('resolves embed JSON under an Rspress base path', () => {
+  expect(resolveCanvasJsonUrl('maps/Demo.canvas', '/docs/')).toBe(
+    '/docs/__canvases__/maps/Demo.json',
+  );
 });

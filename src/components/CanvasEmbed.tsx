@@ -6,9 +6,63 @@ interface CanvasEmbedProps {
   src: string;
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  iframeSandbox?: string;
+  basePath?: string;
 }
 
-export default function CanvasEmbed({ src, fileRoutePrefix, linkPreview }: CanvasEmbedProps) {
+function normalizeBasePath(value: string | undefined): string {
+  if (!value || value === '/' || value === '.' || value === './') return '';
+  return `/${value.replace(/^\/+|\/+$/g, '')}`;
+}
+
+function detectRuntimeBasePath(): string {
+
+  if (typeof document !== 'undefined') {
+    const scripts = Array.from(document.scripts)
+      .map((script) => script.src)
+      .filter(Boolean);
+    for (const scriptUrl of scripts) {
+      try {
+        const pathname = new URL(scriptUrl, document.baseURI).pathname;
+        const marker = pathname.search(/\/(?:static|assets)\//);
+        if (marker > 0) return pathname.slice(0, marker);
+        if (marker === 0) return '';
+      } catch {
+        // Ignore malformed script URLs and continue with the other runtime hints.
+      }
+    }
+
+    const baseHref = document.querySelector('base')?.getAttribute('href');
+    if (baseHref) {
+      try {
+        return normalizeBasePath(new URL(baseHref, document.baseURI).pathname);
+      } catch {
+        // Fall through to the root path when the document base is malformed.
+      }
+    }
+  }
+  return '';
+}
+
+function resolveCanvasJsonUrl(src: string, basePath?: string): string {
+  const jsonPath = src
+    .trim()
+    .replace(/^\/+/, '')
+    .replace(/\.canvas$/i, '')
+    .replace(/\.json$/i, '');
+  const base = normalizeBasePath(basePath ?? detectRuntimeBasePath());
+  return `${base}/__canvases__/${jsonPath}.json`;
+}
+
+export { resolveCanvasJsonUrl };
+
+export default function CanvasEmbed({
+  src,
+  fileRoutePrefix,
+  linkPreview,
+  iframeSandbox,
+  basePath,
+}: CanvasEmbedProps) {
   const [data, setData] = useState<CanvasData | null>(null);
   const [status, setStatus] = useState<'loading' | 'error' | 'loaded'>('loading');
 
@@ -17,8 +71,7 @@ export default function CanvasEmbed({ src, fileRoutePrefix, linkPreview }: Canva
 
     const loadCanvas = async () => {
       setStatus('loading');
-      const jsonPath = src.replace(/\.canvas$/i, '').replace(/\.json$/i, '');
-      const url = `/__canvases__/${jsonPath}.json`;
+      const url = resolveCanvasJsonUrl(src, basePath);
 
       try {
         const res = await fetch(url);
@@ -43,7 +96,7 @@ export default function CanvasEmbed({ src, fileRoutePrefix, linkPreview }: Canva
     return () => {
       cancelled = true;
     };
-  }, [src]);
+  }, [src, basePath]);
 
   if (status === 'loading') {
     return (
@@ -81,5 +134,12 @@ export default function CanvasEmbed({ src, fileRoutePrefix, linkPreview }: Canva
 
   if (!data) return null;
 
-  return <CanvasRenderer data={data} fileRoutePrefix={fileRoutePrefix} linkPreview={linkPreview} />;
+  return (
+    <CanvasRenderer
+      data={data}
+      fileRoutePrefix={fileRoutePrefix}
+      linkPreview={linkPreview}
+      iframeSandbox={iframeSandbox}
+    />
+  );
 }

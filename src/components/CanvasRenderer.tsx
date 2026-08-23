@@ -20,6 +20,7 @@ interface CanvasRendererProps {
   linkPreview?: boolean;
   editable?: boolean;
   editorTitle?: string;
+  iframeSandbox?: string;
 }
 type EditorAction =
   | { type: 'move'; id: string; from: { x: number; y: number }; to: { x: number; y: number } }
@@ -33,7 +34,8 @@ type EditorAction =
   | { type: 'add-node'; node: CanvasNode }
   | { type: 'delete-node'; node: CanvasNode; edges: CanvasEdgeData[] }
   | { type: 'delete-nodes'; nodes: CanvasNode[]; edges: CanvasEdgeData[] }
-  | { type: 'delete-edge'; edge: CanvasEdgeData };
+  | { type: 'delete-edge'; edge: CanvasEdgeData }
+  | { type: 'add-edge'; edge: CanvasEdgeData };
 
 interface DragState {
   id: string;
@@ -62,6 +64,7 @@ export function CanvasRenderer({
   linkPreview,
   editable = false,
   editorTitle = 'Canvas editor',
+  iframeSandbox = 'allow-scripts allow-same-origin allow-popups',
 }: CanvasRendererProps) {
   const [canvas, setCanvas] = useState(() => cloneData(data));
   const [history, setHistory] = useState<EditorAction[]>([]);
@@ -309,6 +312,7 @@ export function CanvasRenderer({
 
   const createTextCard = useCallback(() => {
     const node = createTextNode(canvas.nodes, 0, 0);
+    if (node.type !== 'text') return;
     commit({ type: 'add-node', node }, { ...cloneData(canvas), nodes: [...canvas.nodes, node] });
     setSelectedNodeIds([node.id]);
     setEditingNodeId(node.id);
@@ -480,8 +484,8 @@ export function CanvasRenderer({
           handlePointerMove(event);
           updateDraggedNode(event);
         }}
-        onPointerUp={(event) => {
-          handlePointerUp(event);
+        onPointerUp={() => {
+          handlePointerUp();
           finishNodeDrag();
         }}
         onClick={(event) => {
@@ -565,6 +569,7 @@ export function CanvasRenderer({
                 isSelected={selectedNodeIds.includes(node.id)}
                 fileRoutePrefix={fileRoutePrefix}
                 linkPreview={linkPreview}
+                iframeSandbox={iframeSandbox}
                 onHover={setHoveredNodeId}
                 onClick={handleNodeClick}
               />
@@ -646,10 +651,10 @@ export function CanvasRenderer({
             </button>
             <button
               type="button"
-              className="canvas-toolbar-btn"
               onClick={() => {
-                if (selectedNodeIds.length === 0) return;
-                setEdgeSourceId(selectedNodeIds[0]);
+                const [sourceId] = selectedNodeIds;
+                if (!sourceId) return;
+                setEdgeSourceId(sourceId);
               }}
               disabled={!selectedNodeIds.length}
               aria-label="Connect edge from selected node"

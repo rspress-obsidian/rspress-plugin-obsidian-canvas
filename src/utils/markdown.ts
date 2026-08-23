@@ -62,7 +62,12 @@ export function sanitizeUrl(value: string): string | null {
     return null;
   }
   if (!url) return null;
-  if (url.startsWith('#') || url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
+  if (
+    url.startsWith('#') ||
+    (url.startsWith('/') && !url.startsWith('//')) ||
+    url.startsWith('./') ||
+    url.startsWith('../')
+  ) {
     return url;
   }
   if (MEDIA_DATA_URL.test(url) || SAFE_PROTOCOL.test(url)) {
@@ -381,12 +386,26 @@ function createRenderer(options: MarkdownOptions) {
   return renderer;
 }
 
-function renderFootnotes(footnotes: Footnote[]): string {
+function renderFootnoteContent(content: string, options: MarkdownOptions): string {
+  const preprocessed = preprocessObsidianSyntax(content, options);
+  let html = marked.parseInline(preprocessed.text, {
+    gfm: true,
+    breaks: true,
+    renderer: createRenderer(options),
+    async: false,
+  }) as string;
+  for (const replacement of preprocessed.replacements) {
+    html = html.replaceAll(replacement.token, replacement.html);
+  }
+  return html;
+}
+
+function renderFootnotes(footnotes: Footnote[], options: MarkdownOptions): string {
   if (footnotes.length === 0) return '';
   const items = footnotes
     .map(
       (footnote, index) =>
-        `<li id="canvas-fn-${index + 1}"><p>${footnote.content} <a href="#canvas-fnref-${index + 1}" class="canvas-footnote-backref" aria-label="Back to content">↩</a></p></li>`,
+        `<li id="canvas-fn-${index + 1}"><p>${renderFootnoteContent(footnote.content, options)} <a href="#canvas-fnref-${index + 1}" class="canvas-footnote-backref" aria-label="Back to content">↩</a></p></li>`,
     )
     .join('\n');
   return `<section class="canvas-footnotes" role="doc-endnotes"><ol>${items}</ol></section>`;
@@ -405,6 +424,6 @@ export function renderMarkdown(text: string, options: MarkdownOptions = {}): str
   for (const replacement of preprocessed.replacements) {
     html = html.replaceAll(replacement.token, replacement.html);
   }
-  html += renderFootnotes(preprocessed.footnotes);
+  html += renderFootnotes(preprocessed.footnotes, options);
   return html;
 }

@@ -8,6 +8,7 @@ interface CanvasViewerProps {
   linkPreview?: boolean;
   editable?: boolean;
   editorTitle?: string;
+  iframeSandbox?: string;
 }
 
 export default function CanvasViewer({
@@ -16,6 +17,7 @@ export default function CanvasViewer({
   linkPreview,
   editable,
   editorTitle,
+  iframeSandbox,
 }: CanvasViewerProps) {
   const data = useMemo(() => {
     try {
@@ -37,6 +39,7 @@ export default function CanvasViewer({
       linkPreview={linkPreview}
       editable={editable}
       editorTitle={editorTitle}
+      iframeSandbox={iframeSandbox}
     />
   );
 }

@@ -74,6 +74,7 @@ Each `.canvas` file becomes a page at `/canvas/<filename>`.
 | `editable` | `boolean` | `false` | Enable the browser Canvas editor UI |
 | `editorTitle` | `string` | `Canvas editor` | Title used by the editor banner and exported file |
 | `linkPreview` | `boolean` | `false` | Render link nodes as embedded iframes |
+| `iframeSandbox` | `string` | `allow-scripts allow-same-origin allow-popups` | Sandbox attributes for link previews and PDF rendering |
 
 ## Features
 

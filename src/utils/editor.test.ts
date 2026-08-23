@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import type { CanvasNode } from '../types';
 import {
   createEdge,
   createFileNode,
@@ -18,19 +19,19 @@ test('creates text node with unique id', () => {
 test('creates file node', () => {
   const node = createFileNode([], 0, 0);
   expect(node.type).toBe('file');
-  expect(node.file).toBe('Note.md');
+  if (node.type === 'file') expect(node.file).toBe('Note.md');
 });
 
 test('creates link node', () => {
   const node = createLinkNode([], 0, 0);
   expect(node.type).toBe('link');
-  expect(node.url).toBe('https://');
+  if (node.type === 'link') expect(node.url).toBe('https://');
 });
 
 test('creates group node', () => {
   const node = createGroupNode([], 0, 0);
   expect(node.type).toBe('group');
-  expect(node.label).toBe('Group');
+  if (node.type === 'group') expect(node.label).toBe('Group');
 });
 
 test('creates edge with unique id and arrow toEnd', () => {
@@ -43,7 +44,9 @@ test('creates edge with unique id and arrow toEnd', () => {
 });
 
 test('avoids id collisions', () => {
-  const existing = [{ id: 'node-1', type: 'text', x: 0, y: 0, width: 1, height: 1, text: '' }];
+  const existing: CanvasNode[] = [
+    { id: 'node-1', type: 'text', x: 0, y: 0, width: 1, height: 1, text: '' },
+  ];
   const node = createTextNode(existing, 0, 0);
   expect(node.id).toBe('node-2');
 });

@@ -28,18 +28,13 @@ test.describe("Canvas visual rendering", () => {
     const toolbar = page.locator(".canvas-toolbar");
     await expect(toolbar).toBeVisible();
     const buttons = toolbar.locator("> button");
-    await expect(buttons).toHaveCount(7);
-    await expect(
-      page.locator('button[title="Toggle Grid Dots"]'),
-    ).toBeVisible();
-    await expect(page.locator('button[title="Zoom In"]')).toBeVisible();
-    await expect(page.locator('button[title="Zoom Out"]')).toBeVisible();
-    await expect(page.locator('button[title="Fit to View"]')).toBeVisible();
-    await expect(
-      page.locator('button[title="Reset Scale (1:1)"]'),
-    ).toBeVisible();
-    await expect(page.locator('button[title="Copy Share Link"]')).toBeVisible();
-    await expect(page.locator('button[title="Help & Info"]')).toBeVisible();
+    await expect(buttons).toHaveCount(6);
+    await expect(page.locator('button[aria-label="Toggle Grid Dots"]')).toBeVisible();
+    await expect(page.locator('button[aria-label="Zoom in"]')).toBeVisible();
+    await expect(page.locator('button[aria-label="Zoom out"]')).toBeVisible();
+    await expect(page.locator('button[aria-label="Fit to View"]')).toBeVisible();
+    await expect(page.locator('button[aria-label="Reset zoom (1:1)"]')).toBeVisible();
+    await expect(page.locator('button[aria-label="Help"]')).toBeVisible();
   });
 
   test("pan and zoom works", async ({ page }) => {

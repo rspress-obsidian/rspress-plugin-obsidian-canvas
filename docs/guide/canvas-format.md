@@ -108,11 +108,11 @@ Visual containers for organizing other nodes.
 }
 ```
 
-Groups render behind their contents with a dashed border. Background images support `cover`, `ratio`, and `repeat` styles.
+Groups are visual containers rendered according to their canvas array z-order, with a dashed border and optional label. Background images support `cover`, `ratio`, and `repeat` styles.
 
 ## Edges
 
-Connect nodes with intelligent, orthogonal, collision-avoiding paths. The routing algorithm automatically calculates paths that avoid overlapping other nodes, ensuring maximum readability.
+Edges render as smooth cubic Bézier curves between the requested node sides. The renderer does not perform orthogonal routing or collision avoidance.
 
 ```json
 {
@@ -147,6 +147,6 @@ Both nodes and edges support the `canvasColor` type:
 - **RGB**: `"rgb(255, 0, 0)"`
 - **Preset**: `"1"` (red), `"2"` (orange), `"3"` (yellow), `"4"` (green), `"5"` (cyan), `"6"` (purple)
 
-## Read-only scope
+## Editor and persistence
 
-The plugin does not edit `.canvas` files. Creating, moving, resizing, deleting, or multi-selecting cards and edges, plus undo/redo, remain Obsidian-only interactions.
+The default viewer is read-only. With `editable: true`, cards and edges can be created, moved, resized, deleted, and multi-selected in browser memory. Export the modified JSON Canvas and copy it back into the vault before the next build; the plugin never writes directly to `.canvas` files.

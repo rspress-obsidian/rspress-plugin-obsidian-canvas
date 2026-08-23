@@ -13,6 +13,7 @@ interface CanvasNodeProps {
   isSelected?: boolean;
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  iframeSandbox?: string;
   onHover?: (nodeId: string | null) => void;
   onClick?: (nodeId: string) => void;
 }
@@ -24,7 +25,17 @@ function nodeBorderColor(color: string | undefined): string {
 function mediaKind(
   mediaType: string | undefined,
   file: string,
+  flags: {
+    isImage?: boolean;
+    isVideo?: boolean;
+    isAudio?: boolean;
+    isPdf?: boolean;
+  } = {},
 ): 'image' | 'audio' | 'video' | 'pdf' | 'file' {
+  if (flags.isImage) return 'image';
+  if (flags.isAudio) return 'audio';
+  if (flags.isVideo) return 'video';
+  if (flags.isPdf) return 'pdf';
   if (mediaType?.startsWith('image/')) return 'image';
   if (mediaType?.startsWith('audio/')) return 'audio';
   if (mediaType?.startsWith('video/')) return 'video';
@@ -47,6 +58,7 @@ export const CanvasNodeComponent = memo(function CanvasNodeComponent({
   isSelected,
   fileRoutePrefix,
   linkPreview,
+  iframeSandbox = 'allow-scripts allow-same-origin allow-popups',
   onHover,
   onClick,
 }: CanvasNodeProps) {
@@ -93,6 +105,7 @@ export const CanvasNodeComponent = memo(function CanvasNodeComponent({
         notes={notes}
         fileRoutePrefix={fileRoutePrefix}
         linkPreview={linkPreview}
+        iframeSandbox={iframeSandbox}
       />
     </div>
   );
@@ -104,20 +117,20 @@ function NodeContent({
   notes,
   fileRoutePrefix,
   linkPreview,
+  iframeSandbox,
 }: {
   node: CanvasNode;
   assets?: Record<string, string>;
   notes?: Record<string, string>;
   fileRoutePrefix?: string;
   linkPreview?: boolean;
+  iframeSandbox: string;
 }) {
   const borderColor = nodeBorderColor(node.color);
+  const text = node.type === 'text' ? node.text : '';
   const renderedMarkdown = useMemo(
-    () =>
-      node.type === 'text'
-        ? renderMarkdown(node.text || '', { assets, notes, fileRoutePrefix })
-        : '',
-    [node.type, node.text, assets, notes, fileRoutePrefix],
+    () => (text ? renderMarkdown(text, { assets, notes, fileRoutePrefix }) : ''),
+    [text, assets, notes, fileRoutePrefix],
   );
 
   switch (node.type) {
@@ -133,9 +146,10 @@ function NodeContent({
       const fileName = node.file.replace(/\.\w+$/, '');
       const titleText = node.subpath ? `${fileName} > ${node.subpath.substring(1)}` : fileName;
       const assetUrl = node.assetUrl || node.imageUrl;
-      const kind = mediaKind(node.mediaType, node.file);
+      const safeAssetUrl = assetUrl ? sanitizeUrl(assetUrl) : null;
+      const kind = mediaKind(node.mediaType, node.file, node);
 
-      if (assetUrl && kind !== 'file') {
+      if (safeAssetUrl && kind !== 'file') {
         return (
           <div className="canvas-node-content">
             <div
@@ -148,12 +162,21 @@ function NodeContent({
             </div>
             <div className="canvas-node-file-body">
               {kind === 'image' && (
-                <img className="canvas-file-image" src={assetUrl} alt={node.file} />
+                <img className="canvas-file-image" src={safeAssetUrl} alt={node.file} />
               )}
-              {kind === 'audio' && <audio className="canvas-file-media" controls src={assetUrl} />}
-              {kind === 'video' && <video className="canvas-file-media" controls src={assetUrl} />}
+              {kind === 'audio' && (
+                <audio className="canvas-file-media" controls src={safeAssetUrl} />
+              )}
+              {kind === 'video' && (
+                <video className="canvas-file-media" controls src={safeAssetUrl} />
+              )}
               {kind === 'pdf' && (
-                <iframe className="canvas-file-pdf" src={assetUrl} title={node.file} />
+                <iframe
+                  className="canvas-file-pdf"
+                  src={safeAssetUrl}
+                  title={node.file}
+                  sandbox={iframeSandbox}
+                />
               )}
             </div>
           </div>
@@ -234,7 +257,7 @@ function NodeContent({
                 src={safeUrl}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 title={node.url}
-                sandbox="allow-scripts allow-same-origin allow-popups"
+                sandbox={iframeSandbox}
               />
             </div>
           </div>
@@ -256,12 +279,13 @@ function NodeContent({
         </div>
       );
     }
-    case 'group':
+    case 'group': {
+      const safeBackgroundUrl = node.backgroundUrl ? sanitizeUrl(node.backgroundUrl) : null;
       return (
         <div
           className="canvas-node-content canvas-group"
           style={{
-            backgroundImage: node.backgroundUrl ? `url(${node.backgroundUrl})` : undefined,
+            backgroundImage: safeBackgroundUrl ? `url("${safeBackgroundUrl}")` : undefined,
             backgroundSize:
               node.backgroundStyle === 'cover'
                 ? 'cover'
@@ -276,6 +300,7 @@ function NodeContent({
           {node.label && <div className="canvas-group-label">{node.label}</div>}
         </div>
       );
+    }
     default:
       return null;
   }

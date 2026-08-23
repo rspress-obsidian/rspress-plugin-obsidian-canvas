@@ -8,14 +8,17 @@ import type { CanvasPluginOptions } from './types';
 
 const MIME_TYPES: Record<string, string> = {
   '.avif': 'image/avif',
+  '.flac': 'audio/flac',
   '.gif': 'image/gif',
   '.jpeg': 'image/jpeg',
   '.jpg': 'image/jpeg',
   '.m4a': 'audio/mp4',
   '.md': 'text/markdown',
+  '.mov': 'video/quicktime',
   '.mp3': 'audio/mpeg',
   '.mp4': 'video/mp4',
   '.ogg': 'audio/ogg',
+  '.ogv': 'video/ogg',
   '.pdf': 'application/pdf',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
@@ -23,7 +26,6 @@ const MIME_TYPES: Record<string, string> = {
   '.webm': 'video/webm',
   '.webp': 'image/webp',
 };
-const IMAGE_EXTENSIONS = new Set(['.avif', '.gif', '.jpeg', '.jpg', '.png', '.svg', '.webp']);
 const MARKDOWN_EXTENSIONS = new Set(['.md', '.mdx', '.markdown']);
 
 function normalizeRelativePath(value: string): string {
@@ -170,7 +172,10 @@ async function enrichCanvas(canvasJson: string, vaultRoot: string): Promise<stri
         if (asset) {
           node.assetUrl = asset.url;
           node.mediaType = asset.mimeType;
-          node.isImage = IMAGE_EXTENSIONS.has(extension);
+          node.isImage = asset.mimeType.startsWith('image/');
+          node.isAudio = asset.mimeType.startsWith('audio/');
+          node.isVideo = asset.mimeType.startsWith('video/');
+          node.isPdf = asset.mimeType === 'application/pdf';
           if (node.isImage) node.imageUrl = asset.url;
         }
       }
@@ -317,7 +322,7 @@ export function pluginObsidianCanvas(options?: CanvasPluginOptions): RspressPlug
 
           return {
             routePath,
-            content: `<CanvasViewer canvasJson={${JSON.stringify(enrichedCanvasJson)}} fileRoutePrefix={${JSON.stringify(resolvedOptions.fileRoutePrefix)}} linkPreview={${JSON.stringify(resolvedOptions.linkPreview)}} editable={${JSON.stringify(resolvedOptions.editable)}} editorTitle={${JSON.stringify(resolvedOptions.editorTitle)}} />`,
+            content: `<CanvasViewer canvasJson={${JSON.stringify(enrichedCanvasJson)}} fileRoutePrefix={${JSON.stringify(resolvedOptions.fileRoutePrefix)}} linkPreview={${JSON.stringify(resolvedOptions.linkPreview)}} editable={${JSON.stringify(resolvedOptions.editable)}} editorTitle={${JSON.stringify(resolvedOptions.editorTitle)}} iframeSandbox={${JSON.stringify(resolvedOptions.iframeSandbox)}} />`,
           };
         }),
       );
